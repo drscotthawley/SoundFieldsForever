@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.android.belmontresearch.soundintensityon3dplane.MainActivity">
+
+    <TextView
+        android:id="@+id/textView_x"
+        android:layout_width="9dp"
+        android:layout_height="11dp"
+        android:text="X"
+        app:layout_constraintRight_toLeftOf="@+id/textView_y"
+        android:layout_marginRight="66dp"
+        android:layout_marginTop="19dp"
+        app:layout_constraintTop_toBottomOf="@+id/button_collectionState"
+        android:layout_marginEnd="66dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Space and Sound Data Logger"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.121"
+        android:id="@+id/textView" />
+
+    <Button
+        android:id="@+id/button_collectionState"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Start Collection!"
+        android:onClick="stateChange"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginTop="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintHorizontal_bias="0.502"
+        app:layout_constraintVertical_bias="0.154" />
+
+    <TextView
+        android:id="@+id/textView_xValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="-"
+        app:layout_constraintRight_toLeftOf="@+id/textView_yValue"
+        android:layout_marginRight="72dp"
+        android:layout_marginTop="38dp"
+        app:layout_constraintTop_toBottomOf="@+id/textView_x"
+        android:layout_marginEnd="72dp" />
+
+    <TextView
+        android:id="@+id/textView_yValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="-"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintHorizontal_bias="0.501"
+        android:layout_marginTop="38dp"
+        app:layout_constraintTop_toBottomOf="@+id/textView_y" />
+
+    <TextView
+        android:id="@+id/textView_y"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Y"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        android:layout_marginTop="19dp"
+        app:layout_constraintTop_toBottomOf="@+id/button_collectionState"
+        app:layout_constraintHorizontal_bias="0.501" />
+
+    <TextView
+        android:id="@+id/textView_zValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="-"
+        app:layout_constraintLeft_toRightOf="@+id/textView_yValue"
+        android:layout_marginLeft="69dp"
+        android:layout_marginTop="38dp"
+        app:layout_constraintTop_toBottomOf="@+id/textView_z"
+        android:layout_marginStart="69dp" />
+
+    <TextView
+        android:id="@+id/textView_z"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Z"
+        app:layout_constraintLeft_toRightOf="@+id/textView_y"
+        android:layout_marginLeft="67dp"
+        android:layout_marginTop="19dp"
+        app:layout_constraintTop_toBottomOf="@+id/button_collectionState"
+        android:layout_marginStart="67dp" />
+
+    <TextView
+        android:id="@+id/textView_db"
+        android:layout_width="match_parent"
+        android:layout_height="176dp"
+        android:layout_marginBottom="7dp"
+        android:layout_marginRight="8dp"
+        android:text="db"
+        android:textAlignment="center"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent" />
+
+    <Button
+        android:id="@+id/button"
+        android:layout_width="wrap_content"
+        android:layout_height="30sp"
+        android:text="Delete current dataset"
+        android:textSize="10sp"
+        android:drawable="@android:color/holo_red_light"
+        android:onClick="deleteData"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginTop="8dp"
+        android:layout_marginRight="8dp"
+        app:layout_constraintRight_toRightOf="parent" />
+
+
+    <TextView
+        android:id="@+id/textView_bandpassF"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="14dp"
+        android:text="TextView"
+        app:layout_constraintBottom_toTopOf="@+id/textView_db"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@+id/textView_yValue"
+        android:layout_marginLeft="8dp"
+        app:layout_constraintVertical_bias="0.319"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_marginRight="8dp"
+        app:layout_constraintRight_toRightOf="parent" />
+
+    <SeekBar
+        android:id="@+id/seekBar_frequency"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="0dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginRight="8dp"
+        android:layout_marginTop="0dp"
+        android:max="20000"
+        android:progress="3000"
+        app:layout_constraintBottom_toTopOf="@+id/textView_bandpassF"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView_yValue" />
+
+</android.support.constraint.ConstraintLayout>
