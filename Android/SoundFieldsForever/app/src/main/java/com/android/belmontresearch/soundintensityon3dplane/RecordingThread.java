@@ -67,7 +67,7 @@ public class RecordingThread {
             bufferSize = SAMPLE_RATE * 2;
         }
 
-        biquad = new BiQuad(BiQuad.Type.BANDPASS, 400, SAMPLE_RATE, 100);
+        biquad = new BiQuad();
 
         audioBuffer = new short[bufferSize / 2];
 
@@ -91,12 +91,13 @@ public class RecordingThread {
             int numberOfShort = record.read(audioBuffer, 0, audioBuffer.length);
             shortsRead += numberOfShort;
 
+            audioBuffer = biquad.bqfilter(audioBuffer, SAMPLE_RATE, 1000, 5);
+
             /*
              * Noise level meter begins here
              */
             // Compute the RMS value. (Note that this does not remove DC).
             for (int i = 0; i < audioBuffer.length; i++) {
-                audioBuffer[i] = (short)biquad.result(audioBuffer[i]);
                 rms += audioBuffer[i] * audioBuffer[i];
             }
             rms = Math.sqrt(rms / audioBuffer.length);

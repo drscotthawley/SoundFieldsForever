@@ -31,13 +31,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import be.tarsos.dsp.AudioDispatcher;
-import be.tarsos.dsp.AudioEvent;
-import be.tarsos.dsp.AudioProcessor;
 import be.tarsos.dsp.SilenceDetector;
-import be.tarsos.dsp.filters.BandPass;
 
-public class MainActivity extends AppCompatActivity implements AudioProcessor {
+public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -60,12 +56,6 @@ public class MainActivity extends AppCompatActivity implements AudioProcessor {
 
     File file;
     FileOutputStream fop = null;
-
-    AudioDispatcher dispatcher;
-    SilenceDetector silenceDetector;
-    double recorderAmplitude;
-    BandPass bandProcess;
-    BandPass bandProcess2;
 
     private RecordingThread mRecordingThread;
 
@@ -332,6 +322,7 @@ public class MainActivity extends AppCompatActivity implements AudioProcessor {
 
                     TangoPoseData timePose = mTango.getPoseAtTime(pose.timestamp, framePair);
 
+//                    This code is to be uncommented when socket connection parameters are better defined
 //                    try {
 //                        if(socket != null)
 //                        if(socket.isConnected()) {
@@ -344,6 +335,7 @@ public class MainActivity extends AppCompatActivity implements AudioProcessor {
 //                        e.printStackTrace();
 //                    }
 
+                    // Gets rms value for microphone input
                     double rms = mRecordingThread.getRmsdB();
 
                     if (rms > -180 && isCapturingData) {
@@ -432,6 +424,7 @@ public class MainActivity extends AppCompatActivity implements AudioProcessor {
         });
     }
 
+    // Method that handles the onClick event of the record-state button
     public void stateChange(View view) {
         Button v = (Button) view;
         if (isCapturingData) {
@@ -446,8 +439,9 @@ public class MainActivity extends AppCompatActivity implements AudioProcessor {
         }
     }
 
+    // onClick handler that deletes any previous data
     public void deleteData(View view) {
-        boolean deleted = file.delete();
+        file.delete();
     }
 
     /* Checks if external storage is available for read and write */
@@ -468,15 +462,6 @@ public class MainActivity extends AppCompatActivity implements AudioProcessor {
         }
 
         return directory;
-    }
-
-    @Override
-    public boolean process(AudioEvent audioEvent) {
-        return true;
-    }
-
-    @Override
-    public void processingFinished() {
     }
 
 }
