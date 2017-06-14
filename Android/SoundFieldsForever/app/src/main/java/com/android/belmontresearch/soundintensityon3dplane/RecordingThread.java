@@ -13,12 +13,14 @@ public class RecordingThread {
     private static final String LOG_TAG = RecordingThread.class.getSimpleName();
     private static final int SAMPLE_RATE = 44100;
     private short[] audioBuffer;
+    private short[] audioBuffer2;
     private double rms = 0;
     private double mAlpha;
     private double mGain;
     private double mRmsSmoothed;
     private double rmsdB;
     public BiQuad biquad;
+    private short[] y;
 
     public RecordingThread(AudioDataReceivedListener listener) {
         mListener = listener;
@@ -70,8 +72,9 @@ public class RecordingThread {
         biquad = new BiQuad();
 
         audioBuffer = new short[bufferSize / 2];
+        audioBuffer2 = new short[bufferSize / 2];
 
-        AudioRecord record = new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION,
+        AudioRecord record = new AudioRecord(MediaRecorder.AudioSource.DEFAULT,
                 SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
@@ -91,16 +94,17 @@ public class RecordingThread {
             int numberOfShort = record.read(audioBuffer, 0, audioBuffer.length);
             shortsRead += numberOfShort;
 
-            audioBuffer = biquad.bqfilter(audioBuffer, SAMPLE_RATE, 1000, 5);
+            audioBuffer2 = biquad.bqfilter(audioBuffer, audioBuffer2, SAMPLE_RATE, 1000, 1.414f);
+            audioBuffer2 = biquad.bqfilter(audioBuffer2, audioBuffer2, SAMPLE_RATE, 1000, 5);
 
             /*
              * Noise level meter begins here
              */
             // Compute the RMS value. (Note that this does not remove DC).
-            for (int i = 0; i < audioBuffer.length; i++) {
-                rms += audioBuffer[i] * audioBuffer[i];
+            for (int i = 0; i < audioBuffer2.length; i++) {
+                rms += audioBuffer2[i] * audioBuffer2[i];
             }
-            rms = Math.sqrt(rms / audioBuffer.length);
+            rms = Math.sqrt(rms / audioBuffer2.length);
             mAlpha = 1;   mGain = 1.0/32767; //0.0044;
             /*Compute a smoothed version for less flickering of the
             // display.*/

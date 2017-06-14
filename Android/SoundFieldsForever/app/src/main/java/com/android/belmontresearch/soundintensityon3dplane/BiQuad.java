@@ -23,7 +23,7 @@ public class BiQuad {
 
         int filter_choice = 0;
 //      BPF:H(s) = (s / Q) / (s ^ 2 + s / Q + 1) (constant 0dB peakgain)
-        
+
         b0 = alpha;
         b1 = 0;
         b2 = -alpha;
@@ -31,17 +31,11 @@ public class BiQuad {
         a1 = -2 * Math.cos(w0);
         a2 = 1 - alpha;
 
-        if (filter_choice == 1) {
-//            BPF:H(s) = s / (s ^ 2 + s / Q + 1) (constant skirt gain, peak gain = Q)
-            b0 = Q * alpha;
-            b2 = -Q * alpha;
-        }
-
         double coeffs[] = {a0, a1, a2, b0, b1, b2};
         return coeffs;
     }
 
-    public short[] bqfilter(short[] x,float Fs, float f0, float Q) {
+    public short[] bqfilter(short[] x, short[] y, float Fs, float f0, float Q) {
 //            #Biquad IIRfilter
 //    #x =input(buffer of audio signal)
 //    #y =output(including previous values of output)
@@ -56,7 +50,7 @@ public class BiQuad {
         b1 = coeffs[4];
         b2 = coeffs[5];
 
-        short y[] = new short[x.length];
+        //short[] y = new short[x.length];
 //        # initialize y with x
         y[0] = 0;
         y[1] = 0;

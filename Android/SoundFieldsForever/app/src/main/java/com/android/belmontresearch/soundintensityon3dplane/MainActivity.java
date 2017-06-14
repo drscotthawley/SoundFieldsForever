@@ -31,8 +31,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import be.tarsos.dsp.SilenceDetector;
-
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -58,11 +56,11 @@ public class MainActivity extends AppCompatActivity {
     FileOutputStream fop = null;
 
     private RecordingThread mRecordingThread;
+    private BiQuad biquad = new BiQuad();
+    private short[] y;
 
 //    Socket socket;
 //    DataOutputStream DOS;
-
-    double threshold = SilenceDetector.DEFAULT_SILENCE_THRESHOLD;
 
 
     @Override
@@ -117,7 +115,6 @@ public class MainActivity extends AppCompatActivity {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
         }
-
     }
 
 
@@ -338,9 +335,11 @@ public class MainActivity extends AppCompatActivity {
                     // Gets rms value for microphone input
                     double rms = mRecordingThread.getRmsdB();
 
-                    if (rms > -180 && isCapturingData) {
+                    if (rms > -9000 && isCapturingData) {
                         mIsTangoPoseReady.compareAndSet(false, true);
                         final float[] xyz = timePose.getTranslationAsFloats();
+
+
                         final PointTimeData newNode = new PointTimeData(xyz, rms);
                         currentNode.setNextNode(newNode);
                         currentNode = currentNode.getNextNode();
