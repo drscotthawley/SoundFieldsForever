@@ -1,3 +1,4 @@
+#! /usr/bin/env python2.7
 from __future__ import print_function
 import socket
 import sys
@@ -51,7 +52,7 @@ def make_plot(x,y,z):
     if (already_plotted):
         ax.clear()
     #ax.tripcolor(x,y,z)
-    ax.tricontourf(x,y,z, 100) # choose 20 contour levels, just to show how good its interpolation is
+    ax.tricontourf(x,y,z, 20) # choose 20 contour levels, just to show how good its interpolation is
     plt.plot(x,y,'ko')   # plot the locations of the sensor
 
     x_range = np.max(x) - np.min(x)
