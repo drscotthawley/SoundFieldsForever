@@ -12,15 +12,11 @@ import android.util.Log;
 public class RecordingThread {
     private static final String LOG_TAG = RecordingThread.class.getSimpleName();
     private static final int SAMPLE_RATE = 44100;
+    public float centerFrequency = 5000;
     private short[] audioBuffer;
     private short[] audioBuffer2;
-    private double rms = 0;
-    private double mAlpha;
     private double mGain;
-    private double mRmsSmoothed;
     private double rmsdB;
-    public BiQuad biquad;
-    private short[] y;
 
     public RecordingThread(AudioDataReceivedListener listener) {
         mListener = listener;
@@ -58,6 +54,7 @@ public class RecordingThread {
 
     private void record() {
         Log.v(LOG_TAG, "Start");
+        double rms = 0;
         android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO);
 
         // buffer size in bytes
@@ -68,8 +65,6 @@ public class RecordingThread {
         if (bufferSize == AudioRecord.ERROR || bufferSize == AudioRecord.ERROR_BAD_VALUE) {
             bufferSize = SAMPLE_RATE * 2;
         }
-
-        biquad = new BiQuad();
 
         audioBuffer = new short[bufferSize / 2];
         audioBuffer2 = new short[bufferSize / 2];
@@ -87,28 +82,28 @@ public class RecordingThread {
         record.startRecording();
 
         Log.v(LOG_TAG, "Start recording");
-        Log.i(LOG_TAG, audioBuffer.length + "");
 
         long shortsRead = 0;
         while (mShouldContinue) {
             int numberOfShort = record.read(audioBuffer, 0, audioBuffer.length);
             shortsRead += numberOfShort;
 
-            audioBuffer2 = biquad.bqfilter(audioBuffer, audioBuffer2, SAMPLE_RATE, 1000, 1.414f);
-            audioBuffer2 = biquad.bqfilter(audioBuffer2, audioBuffer2, SAMPLE_RATE, 1000, 5);
+//            audioBuffer2 = BiQuad.bqfilter(audioBuffer, audioBuffer2, SAMPLE_RATE, centerFrequency, 5);
+//            audioBuffer2 = BiQuad.bqfilter(audioBuffer2, audioBuffer2, SAMPLE_RATE, centerFrequency, 5);
 
             /*
              * Noise level meter begins here
              */
             // Compute the RMS value. (Note that this does not remove DC).
-            for (int i = 0; i < audioBuffer2.length; i++) {
-                rms += audioBuffer2[i] * audioBuffer2[i];
+            for (int i = 2; i < audioBuffer2.length; i++) {
+                if(i % 3 == 0) {
+                    audioBuffer2[i] = BiQuad.bqfilter(audioBuffer[i], audioBuffer[i - 1], audioBuffer[i - 2], audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], SAMPLE_RATE, centerFrequency, 40);
+                    audioBuffer2[i] = BiQuad.bqfilter(audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], SAMPLE_RATE, centerFrequency, 40);
+                    rms += audioBuffer2[i] * audioBuffer2[i];
+                }
             }
             rms = Math.sqrt(rms / audioBuffer2.length);
-            mAlpha = 1;   mGain = 1.0/32767; //0.0044;
-            /*Compute a smoothed version for less flickering of the
-            // display.*/
-//            mRmsSmoothed = mRmsSmoothed * mAlpha + (1 - mAlpha) * rms;
+            mGain = 1.0/32767; //0.0044;
             rmsdB = 20.0 * Math.log10(mGain * rms);
         }
 

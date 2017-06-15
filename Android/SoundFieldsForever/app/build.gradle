@@ -17,6 +17,39 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    flavorDimensions "stage", "mode"
+
+    productFlavors {
+        dev {
+            dimension "stage"
+            minSdkVersion 23
+            versionNameSuffix "-dev"
+            applicationIdSuffix '.dev'
+            // The following configuration limits the "dev" flavor to using
+            // English stringresources and xxhdpi screen-density resources.
+            resConfigs "en", "xxhdpi"
+        }
+
+        prod {
+            dimension "stage"
+        }
+
+        demo {
+            dimension "mode"
+        }
+
+        full {
+            dimension "mode"
+        }
+    }
+
+    dexOptions {
+        preDexLibraries true
+        maxProcessCount 8
+        // Instead of setting the heap size for the DEX process, increase Gradle's
+        // heap size to enable dex-in-process. To learm more, read the next section.
+        // javaMaxHeapSize "2048m"
+    }
 }
 
 dependencies {

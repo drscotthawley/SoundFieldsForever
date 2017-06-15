@@ -4,12 +4,12 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,8 +26,6 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 import com.projecttango.tangosupport.TangoSupport;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -53,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
     TextView dbView;
 
     File file;
-    FileOutputStream fop = null;
+
 
     private RecordingThread mRecordingThread;
     private BiQuad biquad = new BiQuad();
@@ -75,14 +73,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        file = new File(getAlbumStorageDir(), "raw_data.txt");
-
         xValue = (TextView) findViewById(R.id.textView_xValue);
         yValue = (TextView) findViewById(R.id.textView_yValue);
         zValue = (TextView) findViewById(R.id.textView_zValue);
         bandPassF = (TextView) findViewById(R.id.textView_bandpassF);
-//        SeekBar frequencySeek = (SeekBar) findViewById(R.id.seekBar_frequency);
-//        frequencySeek.setOnSeekBarChangeListener(onProgressChanged);
+        SeekBar frequencySeek = (SeekBar) findViewById(R.id.seekBar_frequency);
+        frequencySeek.setOnSeekBarChangeListener(onProgressChanged);
 
         dbView = (TextView) findViewById(R.id.textView_db);
 
@@ -117,25 +113,24 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private SeekBar.OnSeekBarChangeListener onProgressChanged =
+            new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    bandPassF.setText(progress + "");
+                    mRecordingThread.centerFrequency = progress;
+                }
 
-//    private SeekBar.OnSeekBarChangeListener onProgressChanged =
-//            new SeekBar.OnSeekBarChangeListener() {
-//                @Override
-//                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-//                    bandPassF.setText(progress + "");
-//                    mRecordingThread.biquad.center_freq = progress;
-//                }
-//
-//                @Override
-//                public void onStartTrackingTouch(SeekBar seekBar) {
-//
-//                }
-//
-//                @Override
-//                public void onStopTrackingTouch(SeekBar seekBar) {
-//
-//                }
-//            };
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+
+                }
+            };
 
     @Override
     protected void onResume() {
@@ -197,79 +192,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-    }
-
-    public void writeToDisk() {
-
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(MainActivity.this, "Saving Data",
-                        Toast.LENGTH_LONG).show();
-            }
-        });
-
-        try {
-            fop = new FileOutputStream(file);
-
-            if (!file.exists()) {
-                try {
-                    file.createNewFile();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            String content = "";
-
-            currentNode = nodeListStart;
-
-            while (currentNode.getNextNode() != null) {
-                content += currentNode.toString() + System.lineSeparator();
-                Log.i(TAG, "Writing: " + currentNode.toString());
-                currentNode = currentNode.getNextNode();
-            }
-            content += currentNode.toString();
-
-            byte[] contentInBytes = content.getBytes();
-
-//            PrintWriter pOut = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket
-//                    .getOutputStream())), true);
-
-//            try {
-//                if(socket != null) {
-//                    pOut.print(contentInBytes);
-//                    pOut.flush();
-//                    DOS.write(contentInBytes);
-//                    DOS.flush();
-//                    Log.i(TAG, "Wrote to server");
-//                }
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-
-            fop.write(contentInBytes);
-            fop.flush();
-            fop.close();
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText(MainActivity.this, "Data Saved",
-                            Toast.LENGTH_LONG).show();
-                }
-            });
-        } catch (final IOException e) {
-            e.printStackTrace();
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText(MainActivity.this, "Data could not be saved" + e,
-                            Toast.LENGTH_LONG).show();
-                }
-            });
-        }
-
-
     }
 
     /**
@@ -430,7 +352,22 @@ public class MainActivity extends AppCompatActivity {
             mRecordingThread.stopRecording();
             v.setText("Start Collection");
             isCapturingData = false;
-            writeToDisk();
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    Toast.makeText(MainActivity.this, "Saving Data",
+                            Toast.LENGTH_LONG).show();
+                }
+            });
+            boolean written = DiskWrite.writeToDisk(MainActivity.this, nodeListStart);
+            while (written != true) {
+
+            }
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    Toast.makeText(MainActivity.this, "Data Saved!",
+                            Toast.LENGTH_LONG).show();
+                }
+            });
         } else {
             mRecordingThread.startRecording();
             v.setText("End Collection");
@@ -441,26 +378,6 @@ public class MainActivity extends AppCompatActivity {
     // onClick handler that deletes any previous data
     public void deleteData(View view) {
         file.delete();
-    }
-
-    /* Checks if external storage is available for read and write */
-    public boolean isExternalStorageWritable() {
-        String state = Environment.getExternalStorageState();
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            return true;
-        }
-        return false;
-    }
-
-    public File getAlbumStorageDir() {
-        // Get the directory for the user's public pictures directory.
-        File directory = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOCUMENTS), "raw_data");
-        if (!directory.mkdirs()) {
-            Log.e(TAG, "Directory not created");
-        }
-
-        return directory;
     }
 
 }
