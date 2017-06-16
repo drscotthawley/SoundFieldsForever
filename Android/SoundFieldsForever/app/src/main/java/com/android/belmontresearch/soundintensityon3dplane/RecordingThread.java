@@ -3,6 +3,7 @@ package com.android.belmontresearch.soundintensityon3dplane;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.os.Process;
 import android.util.Log;
 
 /**
@@ -55,7 +56,7 @@ public class RecordingThread {
     private void record() {
         Log.v(LOG_TAG, "Start");
         double rms = 0;
-        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO);
+        android.os.Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
 
         // buffer size in bytes
         int bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
@@ -88,21 +89,19 @@ public class RecordingThread {
             int numberOfShort = record.read(audioBuffer, 0, audioBuffer.length);
             shortsRead += numberOfShort;
 
-//            audioBuffer2 = BiQuad.bqfilter(audioBuffer, audioBuffer2, SAMPLE_RATE, centerFrequency, 5);
-//            audioBuffer2 = BiQuad.bqfilter(audioBuffer2, audioBuffer2, SAMPLE_RATE, centerFrequency, 5);
-
             /*
              * Noise level meter begins here
              */
             // Compute the RMS value. (Note that this does not remove DC).
-            for (int i = 2; i < audioBuffer2.length; i++) {
+            for (int i = 2; i < audioBuffer.length; i++) {
                 if(i % 3 == 0) {
-                    audioBuffer2[i] = BiQuad.bqfilter(audioBuffer[i], audioBuffer[i - 1], audioBuffer[i - 2], audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], SAMPLE_RATE, centerFrequency, 40);
-                    audioBuffer2[i] = BiQuad.bqfilter(audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], SAMPLE_RATE, centerFrequency, 40);
-                    rms += audioBuffer2[i] * audioBuffer2[i];
+//                    audioBuffer2[i] = BiQuad.bqfilter(audioBuffer[i], audioBuffer[i - 1], audioBuffer[i - 2], audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], SAMPLE_RATE, centerFrequency, 5);
+//                    audioBuffer2[i] = BiQuad.bqfilter(audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], SAMPLE_RATE, centerFrequency, 5);
+//                    rms += audioBuffer2[i] * audioBuffer2[i];
+                    rms += audioBuffer[i] * audioBuffer[i];
                 }
             }
-            rms = Math.sqrt(rms / audioBuffer2.length);
+            rms = Math.sqrt(rms / audioBuffer.length);
             mGain = 1.0/32767; //0.0044;
             rmsdB = 20.0 * Math.log10(mGain * rms);
         }
@@ -111,10 +110,6 @@ public class RecordingThread {
         record.release();
 
         Log.v(LOG_TAG, String.format("Recording stopped. Samples read: %d", shortsRead));
-    }
-
-    public short[] getAudioBuffer() {
-        return audioBuffer;
     }
 
     public double getRmsdB() {

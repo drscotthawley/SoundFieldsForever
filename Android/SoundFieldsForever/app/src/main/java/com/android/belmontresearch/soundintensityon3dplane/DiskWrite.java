@@ -2,6 +2,9 @@ package com.android.belmontresearch.soundintensityon3dplane;
 
 import android.content.Context;
 import android.os.Environment;
+import android.util.Log;
+
+import org.java_websocket.client.WebSocketClient;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -34,9 +37,9 @@ public class DiskWrite {
         return directory;
     }
 
-    public static boolean writeToDisk(final Context context, PointTimeData currentNode) {
+    public static boolean writeToDisk(final Context context, PointTimeData currentNode, WebSocketClient mWebSocketClient) {
 
-        FileOutputStream fop = null;
+        FileOutputStream fop;
 
         try {
             fop = new FileOutputStream(file);
@@ -51,34 +54,26 @@ public class DiskWrite {
 
             String content = "";
 
-
-
-
             while (currentNode.getNextNode() != null) {
                 content += currentNode.toString() + System.lineSeparator();
                 currentNode = currentNode.getNextNode();
             }
             content += currentNode.toString();
-
             byte[] contentInBytes = content.getBytes();
-
-//            PrintWriter pOut = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket
-//                    .getOutputStream())), true);
-//            try {
-//                if(socket != null) {
-//                    pOut.print(contentInBytes);
-//                    pOut.flush();
-//                    DOS.write(contentInBytes);
-//                    DOS.flush();
-//                    Log.i(TAG, "Wrote to server");
-//                }
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
 
             fop.write(contentInBytes);
             fop.flush();
             fop.close();
+
+            // Sends information over to the WebSocket server
+            if(mWebSocketClient != null) {
+                if (mWebSocketClient.isOpen()) {
+                    mWebSocketClient.send(content);
+                } else {
+                    Log.e("Websocket", "Websocket not connected");
+                }
+            }
+
 
             return true;
 
@@ -86,4 +81,6 @@ public class DiskWrite {
             return false;
         }
     }
+
+
 }

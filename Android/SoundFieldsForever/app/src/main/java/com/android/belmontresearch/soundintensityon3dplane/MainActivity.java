@@ -3,7 +3,9 @@ package com.android.belmontresearch.soundintensityon3dplane;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Process;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -25,8 +27,13 @@ import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 import com.projecttango.tangosupport.TangoSupport;
 
-import java.io.File;
+import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.handshake.ServerHandshake;
+
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends AppCompatActivity {
@@ -42,24 +49,18 @@ public class MainActivity extends AppCompatActivity {
     private PointTimeData currentNode = nodeListStart;
 
     private boolean isCapturingData = false;
-    private boolean stopped = false;
 
-    TextView xValue;
-    TextView yValue;
-    TextView zValue;
-    TextView bandPassF;
-    TextView dbView;
-
-    File file;
-
+    private TextView xValue;
+    private TextView yValue;
+    private TextView zValue;
+    private TextView bandPassF;
+    private Button vButton;
+    private View root;
+    private View someView;
 
     private RecordingThread mRecordingThread;
-    private BiQuad biquad = new BiQuad();
-    private short[] y;
 
-//    Socket socket;
-//    DataOutputStream DOS;
-
+    private static WebSocketClient mWebSocketClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,40 +70,17 @@ public class MainActivity extends AppCompatActivity {
         mRecordingThread = new RecordingThread(new AudioDataReceivedListener() {
             @Override
             public void onAudioDataReceived(short[] data) {
-                Log.i(TAG, data.toString());
+                Log.i(TAG, Arrays.toString(data));
             }
         });
 
         xValue = (TextView) findViewById(R.id.textView_xValue);
         yValue = (TextView) findViewById(R.id.textView_yValue);
         zValue = (TextView) findViewById(R.id.textView_zValue);
+        vButton = (Button) findViewById(R.id.button_collectionState);
         bandPassF = (TextView) findViewById(R.id.textView_bandpassF);
         SeekBar frequencySeek = (SeekBar) findViewById(R.id.seekBar_frequency);
         frequencySeek.setOnSeekBarChangeListener(onProgressChanged);
-
-        dbView = (TextView) findViewById(R.id.textView_db);
-
-//        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_WIFI_STATE) != PackageManager.PERMISSION_GRANTED) {
-//            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_WIFI_STATE}, 0);
-//        }
-//
-//        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
-//            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.INTERNET}, 0);
-//        }
-
-//        Thread thread = new Thread(new Runnable() {
-//
-//            @Override
-//            public void run() {
-//                    //Your code goes here
-//                    try {
-//                        socket = new Socket("172.20.10.3",5001);
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                    }
-//            }
-//        });
-//        thread.start();
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 0);
@@ -111,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
         }
+
     }
 
     private SeekBar.OnSeekBarChangeListener onProgressChanged =
@@ -228,6 +207,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        someView = findViewById(R.id.constraintLayout);
+
+
         // Listen for new Tango data.
         mTango.connectListener(framePairs, new Tango.TangoUpdateCallback() {
             @Override
@@ -240,68 +222,44 @@ public class MainActivity extends AppCompatActivity {
                     framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
 
                     TangoPoseData timePose = mTango.getPoseAtTime(pose.timestamp, framePair);
-
-//                    This code is to be uncommented when socket connection parameters are better defined
-//                    try {
-//                        if(socket != null)
-//                        if(socket.isConnected()) {
-//                            DOS = new DataOutputStream(socket.getOutputStream());
-//                        } else {
-//                            socket = new Socket("172.20.10.3",5001);
-//                            Log.i(TAG, "Socket not connected");
-//                        }
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                    }
+                    root = someView.getRootView();
 
                     // Gets rms value for microphone input
                     double rms = mRecordingThread.getRmsdB();
 
-                    if (rms > -9000 && isCapturingData) {
-                        mIsTangoPoseReady.compareAndSet(false, true);
-                        final float[] xyz = timePose.getTranslationAsFloats();
+                    if(isCapturingData) {
+                        if (rms > -9000) {
+                            mIsTangoPoseReady.compareAndSet(false, true);
+                            final float[] xyz = timePose.getTranslationAsFloats();
 
+                            final PointTimeData newNode = new PointTimeData(xyz, rms);
+                            currentNode.setNextNode(newNode);
+                            currentNode = currentNode.getNextNode();
 
-                        final PointTimeData newNode = new PointTimeData(xyz, rms);
-                        currentNode.setNextNode(newNode);
-                        currentNode = currentNode.getNextNode();
+                            runOnUiThread(new Runnable() {
 
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                //stuff that updates ui
-                                xValue.setText(String.valueOf(xyz[0]));
-                                yValue.setText(String.valueOf(xyz[1]));
-                                zValue.setText(String.valueOf(xyz[2]));
+                                @Override
+                                public void run() {
+                                    Process.setThreadPriority(Process.THREAD_PRIORITY_DISPLAY);
 
-                                int dbInInt = (int) Math.round(newNode.getDb());
-                                dbView.setText(String.valueOf(dbInInt));
+                                    //stuff that updates ui
+                                    xValue.setText(String.valueOf(xyz[0]));
+                                    yValue.setText(String.valueOf(xyz[1]));
+                                    zValue.setText(String.valueOf(xyz[2]));
 
-                                if (dbInInt > 0) {
-                                    dbView.setBackgroundColor(Color.parseColor("#f44242"));
-                                } else if (dbInInt > -10) {
-                                    dbView.setBackgroundColor(Color.parseColor("#f4417a"));
-                                } else if (dbInInt > -25) {
-                                    dbView.setBackgroundColor(Color.parseColor("#f4419a"));
-                                } else if (dbInInt > -30) {
-                                    dbView.setBackgroundColor(Color.parseColor("#f441df"));
-                                } else if (dbInInt > -45) {
-                                    dbView.setBackgroundColor(Color.parseColor("#d041f4"));
-                                } else if (dbInInt > -60) {
-                                    dbView.setBackgroundColor(Color.parseColor("#b541f4"));
-                                } else if (dbInInt > -85) {
-                                    dbView.setBackgroundColor(Color.parseColor("#8841f4"));
-                                } else if (dbInInt > -100) {
-                                    dbView.setBackgroundColor(Color.parseColor("#6d41f4"));
-                                } else if (dbInInt > -115) {
-                                    dbView.setBackgroundColor(Color.parseColor("#4143f4"));
-                                } else if (dbInInt > -130) {
-                                    dbView.setBackgroundColor(Color.parseColor("#283396"));
-                                } else {
-                                    dbView.setBackgroundColor(Color.parseColor("#1b236d"));
+                                    int dbInInt = (int) Math.round(newNode.getDb());
+                                    vButton.setText(String.valueOf(dbInInt));
+                                    setBackgroundColor(dbInInt);
                                 }
-                            }
-                        });
+                            });
+                        } else {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    vButton.setText("no data");
+                                }
+                            });
+                        }
                     }
                 }
             }
@@ -329,6 +287,32 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void setBackgroundColor(int dbInInt) {
+        if (dbInInt > 0) {
+            root.setBackgroundColor(Color.parseColor("#f44242"));
+        } else if (dbInInt > -10) {
+            root.setBackgroundColor(Color.parseColor("#f4417a"));
+        } else if (dbInInt > -25) {
+            root.setBackgroundColor(Color.parseColor("#f4419a"));
+        } else if (dbInInt > -30) {
+            root.setBackgroundColor(Color.parseColor("#f441df"));
+        } else if (dbInInt > -45) {
+            root.setBackgroundColor(Color.parseColor("#d041f4"));
+        } else if (dbInInt > -60) {
+            root.setBackgroundColor(Color.parseColor("#b541f4"));
+        } else if (dbInInt > -85) {
+            root.setBackgroundColor(Color.parseColor("#8841f4"));
+        } else if (dbInInt > -100) {
+            root.setBackgroundColor(Color.parseColor("#6d41f4"));
+        } else if (dbInInt > -115) {
+            root.setBackgroundColor(Color.parseColor("#4143f4"));
+        } else if (dbInInt > -130) {
+            root.setBackgroundColor(Color.parseColor("#283396"));
+        } else {
+            root.setBackgroundColor(Color.parseColor("#1b236d"));
+        }
+    }
+
     /**
      * Display toast on UI thread.
      *
@@ -350,17 +334,16 @@ public class MainActivity extends AppCompatActivity {
         Button v = (Button) view;
         if (isCapturingData) {
             mRecordingThread.stopRecording();
-            v.setText("Start Collection");
+            v.setTextSize(16);
+            v.setText("Saving Data");
             isCapturingData = false;
-            runOnUiThread(new Runnable() {
-                public void run() {
-                    Toast.makeText(MainActivity.this, "Saving Data",
-                            Toast.LENGTH_LONG).show();
-                }
-            });
-            boolean written = DiskWrite.writeToDisk(MainActivity.this, nodeListStart);
-            while (written != true) {
+            root.setBackgroundColor(Color.parseColor("#ffffff"));
 
+            // Connects the WebSocket
+//            connectWebSocket();
+
+            boolean written = DiskWrite.writeToDisk(MainActivity.this, nodeListStart, mWebSocketClient);
+            while (written != true) {
             }
             runOnUiThread(new Runnable() {
                 public void run() {
@@ -368,16 +351,47 @@ public class MainActivity extends AppCompatActivity {
                             Toast.LENGTH_LONG).show();
                 }
             });
+            v.setText("Start Collection!");
         } else {
             mRecordingThread.startRecording();
-            v.setText("End Collection");
             isCapturingData = true;
+            v.setTextSize(40);
         }
     }
 
-    // onClick handler that deletes any previous data
-    public void deleteData(View view) {
-        file.delete();
+    public void connectWebSocket() {
+        URI uri;
+        try {
+            uri = new URI("wss://sandbox.kaazing.net/echo");
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            Log.e(TAG, e + "");
+            return;
+        }
+
+        mWebSocketClient = new WebSocketClient(uri) {
+            @Override
+            public void onOpen(ServerHandshake serverHandshake) {
+                Log.i("Websocket", "Opened");
+                mWebSocketClient.send("Hello from " + Build.MANUFACTURER + " " + Build.MODEL);
+            }
+
+            @Override
+            public void onMessage(String s) {
+                final String message = s;
+            }
+
+            @Override
+            public void onClose(int i, String s, boolean b) {
+                Log.i("Websocket", "Closed " + s);
+            }
+
+            @Override
+            public void onError(Exception e) {
+                Log.i("Websocket", "Error " + e.getMessage());
+            }
+        };
+        mWebSocketClient.connect();
     }
 
 }
