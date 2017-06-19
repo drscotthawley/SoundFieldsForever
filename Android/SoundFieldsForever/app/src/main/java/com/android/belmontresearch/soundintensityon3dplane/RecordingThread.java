@@ -8,6 +8,7 @@ import android.util.Log;
 
 /**
  * Created by sebastianalegre on 6/13/17.
+ * Object that handles audio
  */
 
 public class RecordingThread {
@@ -16,6 +17,7 @@ public class RecordingThread {
     public float centerFrequency = 5000;
     private short[] audioBuffer;
     private short[] audioBuffer2;
+    private double rms;
     private double mGain;
     private double rmsdB;
 
@@ -54,8 +56,7 @@ public class RecordingThread {
     }
 
     private void record() {
-        Log.v(LOG_TAG, "Start");
-        double rms = 0;
+        rms = 0;
         android.os.Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
 
         // buffer size in bytes
@@ -95,13 +96,13 @@ public class RecordingThread {
             // Compute the RMS value. (Note that this does not remove DC).
             for (int i = 2; i < audioBuffer.length; i++) {
                 if(i % 3 == 0) {
-//                    audioBuffer2[i] = BiQuad.bqfilter(audioBuffer[i], audioBuffer[i - 1], audioBuffer[i - 2], audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], SAMPLE_RATE, centerFrequency, 5);
+                    audioBuffer2[i] = BiQuad.bqfilter(audioBuffer[i], audioBuffer[i - 1], audioBuffer[i - 2], audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], SAMPLE_RATE, centerFrequency, 5);
 //                    audioBuffer2[i] = BiQuad.bqfilter(audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], SAMPLE_RATE, centerFrequency, 5);
-//                    rms += audioBuffer2[i] * audioBuffer2[i];
-                    rms += audioBuffer[i] * audioBuffer[i];
+                    rms += audioBuffer2[i] * audioBuffer2[i];
+//                    rms += audioBuffer[i] * audioBuffer[i];
                 }
             }
-            rms = Math.sqrt(rms / audioBuffer.length);
+            rms = Math.sqrt(rms / audioBuffer2.length);
             mGain = 1.0/32767; //0.0044;
             rmsdB = 20.0 * Math.log10(mGain * rms);
         }

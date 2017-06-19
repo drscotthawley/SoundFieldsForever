@@ -3,9 +3,7 @@ package com.android.belmontresearch.soundintensityon3dplane;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Process;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -25,12 +23,15 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
+import com.koushikdutta.async.ByteBufferList;
+import com.koushikdutta.async.DataEmitter;
+import com.koushikdutta.async.callback.DataCallback;
+import com.koushikdutta.async.http.AsyncHttpClient;
+import com.koushikdutta.async.http.WebSocket;
 import com.projecttango.tangosupport.TangoSupport;
 
 import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -88,6 +89,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
+        }
+
+        try {
+            connectWebSocket();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
         }
 
     }
@@ -227,7 +234,8 @@ public class MainActivity extends AppCompatActivity {
                     // Gets rms value for microphone input
                     double rms = mRecordingThread.getRmsdB();
 
-                    if(isCapturingData) {
+//                  Math.round(pose.timestamp * 10)%2==0 reduces the amount of UI manipulation
+                    if(isCapturingData && Math.round(pose.timestamp * 10)%2==0) {
                         if (rms > -9000) {
                             mIsTangoPoseReady.compareAndSet(false, true);
                             final float[] xyz = timePose.getTranslationAsFloats();
@@ -235,17 +243,16 @@ public class MainActivity extends AppCompatActivity {
                             final PointTimeData newNode = new PointTimeData(xyz, rms);
                             currentNode.setNextNode(newNode);
                             currentNode = currentNode.getNextNode();
+                            Log.i(TAG, pose.timestamp + "");
 
                             runOnUiThread(new Runnable() {
 
                                 @Override
                                 public void run() {
-                                    Process.setThreadPriority(Process.THREAD_PRIORITY_DISPLAY);
-
                                     //stuff that updates ui
                                     xValue.setText(String.valueOf(xyz[0]));
                                     yValue.setText(String.valueOf(xyz[1]));
-                                    zValue.setText(String.valueOf(xyz[2]));
+//                                    zValue.setText(String.valueOf(xyz[2]));
 
                                     int dbInInt = (int) Math.round(newNode.getDb());
                                     vButton.setText(String.valueOf(dbInInt));
@@ -341,7 +348,6 @@ public class MainActivity extends AppCompatActivity {
 
             // Connects the WebSocket
 //            connectWebSocket();
-
             boolean written = DiskWrite.writeToDisk(MainActivity.this, nodeListStart, mWebSocketClient);
             while (written != true) {
             }
@@ -356,42 +362,34 @@ public class MainActivity extends AppCompatActivity {
             mRecordingThread.startRecording();
             isCapturingData = true;
             v.setTextSize(40);
+
         }
     }
-
-    public void connectWebSocket() {
-        URI uri;
-        try {
-            uri = new URI("wss://sandbox.kaazing.net/echo");
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-            Log.e(TAG, e + "");
-            return;
-        }
-
-        mWebSocketClient = new WebSocketClient(uri) {
+    
+    private void connectWebSocket() throws URISyntaxException {
+        AsyncHttpClient.getDefaultInstance().websocket("wss://echo.websocket.org", "my-protocol", new AsyncHttpClient.WebSocketConnectCallback() {
             @Override
-            public void onOpen(ServerHandshake serverHandshake) {
-                Log.i("Websocket", "Opened");
-                mWebSocketClient.send("Hello from " + Build.MANUFACTURER + " " + Build.MODEL);
+            public void onCompleted(Exception ex, WebSocket webSocket) {
+                if (ex != null) {
+                    ex.printStackTrace();
+                    return;
+                }
+                webSocket.send("a string");
+                webSocket.send(new byte[10]);
+                webSocket.setStringCallback(new WebSocket.StringCallback() {
+                    public void onStringAvailable(String s) {
+                        System.out.println("I got a string: " + s);
+                    }
+                });
+                webSocket.setDataCallback(new DataCallback() {
+                    public void onDataAvailable(DataEmitter emitter, ByteBufferList byteBufferList) {
+                        System.out.println("I got some bytes!");
+                        // note that this data has been read
+                        byteBufferList.recycle();
+                    }
+                });
             }
-
-            @Override
-            public void onMessage(String s) {
-                final String message = s;
-            }
-
-            @Override
-            public void onClose(int i, String s, boolean b) {
-                Log.i("Websocket", "Closed " + s);
-            }
-
-            @Override
-            public void onError(Exception e) {
-                Log.i("Websocket", "Error " + e.getMessage());
-            }
-        };
-        mWebSocketClient.connect();
+        });
     }
 
 }
