@@ -13,16 +13,28 @@ This works best with the Chrome browser; Firefox is slow.
 
 
 ## Setup/Installation
-Requirements: node.js
+
+
+* Set up Node.js and NPM.  Instructions: [How to Install Node.js and NPM on a Mac](http://blog.teamtreehouse.com/install-node-js-npm-mac)
+* Then from Terminal within the WebVizServer diretory, run `npm install` 
+
+...and that should be it!
 
 
 ## To Run:
 
-`node index.js`
+Start the server from the Terminal
 
-You can test the server by running the Python (3) client:
-`python3 test_client.py`
+	node index.js &
+	
+Then point your web browser to this url: <http://localhost:3000>
 
 
+You can test the socket capability by running the Python (3) client in Terminal:
+
+	python3 test_client.py
+
+...and see what it does to the screen on your web browser!
+<hr>
 Copyright (2017) Scott Hawley
 
