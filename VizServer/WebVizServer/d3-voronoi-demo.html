@@ -42,6 +42,14 @@ This works best with the Chrome browser; Firefox is slow.<br>
 <button id="reset">Reset Zoom</button>
 <button id="sitesToggle">Toggle Sites</button>
 <button id="boundsToggle">Toggle Boundaries</button>
+Style: <div class="dropdown"
+<form>
+ <select id="plot-type" onchange="styleChange(this)" >
+    <option value="Triangles" >Triangles</option>
+    <option value="Cells" selected="selected">Cells</option>
+</select>
+</form>
+</div>
 
 Filter frequency: <div class="dropdown"
  <form>
@@ -105,12 +113,25 @@ for (i = 0; i < npoints; i++) {
 
 var showSites = true;
 var showBounds = true;
+var showPolys = true;
 
 var g = svg.append("g")
     .attr("transform", "translate(" + 0+ "," + 0 + ")");
 
 var voronoi = d3.voronoi()
     .extent([[-1, -1], [width + 1, height + 1]]);
+
+
+// We can add Delaunay Triangulation as well
+var triangle = svg.append("g")
+  .attr("class", "triangles")
+  .selectAll("path")
+  .data(voronoi.triangles(sites))
+  .enter().append("path")
+    .style('fill', 'none')
+    .style('stroke','#000')
+    .call(redrawTriangle);
+
 
 var polygon = svg.append("g")
     .attr("class", "polygons")
@@ -120,16 +141,6 @@ var polygon = svg.append("g")
     .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
     .call(redrawPolygon);
 
-/*
-// We can add Delaunay Triangulation as well
-var triangle = svg.append("g")
-  .attr("class", "triangles")
-  .selectAll("path")
-  .data(voronoi.triangles(sites))
-  .enter().append("path")
-    .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
-    .call(redrawTriangle);
-*/
 
 var site = svg.append("g")
     .attr("class", "sites")
@@ -142,9 +153,9 @@ var site = svg.append("g")
 
 function redraw() {
     var diagram = voronoi(sites);
+    triangle = triangle.data(diagram.triangles()), triangle.exit().remove();
+    triangle = triangle.enter().append("path").merge(triangle).call(redrawTriangle);
     polygon = polygon.data(diagram.polygons()).call(redrawPolygon);
-    //triangle = triangle.data(diagram.triangles()), triangle.exit().remove();
-    //triangle = triangle.enter().append("path").merge(triangle).call(redrawTriangle);
     site = site.data(sites).call(redrawSite);
 }
 
@@ -199,6 +210,7 @@ function zoomed() {
 function effect_zoom(transform) {
     site.attr("transform", transform);
     polygon.attr("transform", transform);
+    triangle.attr("transform", transform);
 }
 
 function resetted() {
@@ -230,6 +242,22 @@ function freqChange(option) {
     //redrawSite();
 }
 
+// Style Change: Triangles vs. Cells
+function styleChange(option) {
+    //console.log("Style change! option.value = ",option.value)
+    if ('Triangles'== option.value) {
+        console.log("TODO: Not sure how to color the triangles yet")
+        showPolys = false;
+        showBounds = false;
+        svg.selectAll("g.polygons").selectAll("path").style('fill', 'none').style('stroke', 'none'); 
+    } else {
+        showPolys = true;
+        showBounds = true;
+        svg.selectAll("g.polygons").selectAll("path").style('stroke', '#000')
+        .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
+
+    }
+}
 
 //**** PRETEND LIKE WE"RE GETTING NEW DATA
 
@@ -254,17 +282,32 @@ function updateData() {
     }
 
     // Make the changes: Delete and re-generate
+    svg.selectAll("g.triangles").remove();
+    triangle = svg.append("g")
+        .attr("class", "triangles")
+        .selectAll("path")
+        .data(voronoi.triangles(sites))
+        .enter().append("path")
+        .style('fill', 'none')
+        .style('stroke','#000')
+        .call(redrawTriangle);
+
+
     svg.selectAll("g.polygons").remove();
     polygon = svg.append("g")
         .attr("class", "polygons")
-      .selectAll("path")
-      .data(voronoi.polygons(sites))
-      .enter().append("path")
-      .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
+        .selectAll("path")
+        .data(voronoi.polygons(sites))
+        .enter().append("path")
+        .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
         .call(redrawPolygon);
     if (false == showBounds) {
         svg.selectAll("g.polygons").style('stroke', 'none'); 
     }
+    if (false == showPolys) {
+        svg.selectAll("g.polygons").selectAll("path").style('fill', 'none'); 
+    }
+
 
     svg.selectAll("g.sites").remove();
     site = svg.append("g")
