@@ -34,7 +34,9 @@ You can test the socket capability by running the Python (3) client in Terminal:
 
 	python3 test_client.py
 
-...and see what it does to the screen on your web browser!
+...and see what it does to the screen on your web browser!  
+
+Now, the real trick will be to get the **Android client** to send the data.  Note about the data string format: see the `sample_data.csv` file.  Top line needs to be "x,y,z,dB" *exactly*, with no spaces.  Lines need to be separated by carriage returns. No spaces anywhere.  (Yea, we should make this more robust.)
 <hr>
 Copyright (2017) Scott Hawley
 
