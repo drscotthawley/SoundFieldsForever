@@ -11,7 +11,10 @@ def on_bbb_response(*args):
 with open('sample_data.csv', 'r') as myfile:
     data_string =myfile.read()
 
-with SocketIO('localhost', 3000, LoggingNamespace) as socketIO:
+hostname = 'localhost'
+port = 3000
+
+with SocketIO(hostname, port, LoggingNamespace) as socketIO:
     #socketIO.emit('chat message', {'xxx': 'yyy'}, on_bbb_response)
     #socketIO.wait_for_callbacks(seconds=1)
     socketIO.emit('chat message',data_string)
