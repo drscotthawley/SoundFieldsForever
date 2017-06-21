@@ -268,7 +268,9 @@ function styleChange(option) {
         showPolys = true;
         svg.selectAll("g.polygons").selectAll("path")
             .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
-            .style('stroke', '#000')
+        if (showBounds) {
+            svg.selectAll("g.polygons").selectAll("path").style('stroke', '#000')
+        }
 
     }
 }
