@@ -131,8 +131,20 @@ transform = d3.zoomIdentity;
     var g = svg.append("g")
         .attr("transform", "translate(" + 0+ "," + 0 + ")");
 
+
+    
+    function getMinMaxOf2DIndex (arr, idx) { //https://stackoverflow.com/questions/23396945/getting-the-min-and-max-value-in-javascript-but-from-a-2d-array
+        return {
+            min: Math.min.apply(null, arr.map(function (e) { return e[idx]})),
+            max: Math.max.apply(null, arr.map(function (e) { return e[idx]}))
+        }
+    } 
+    var xextents = getMinMaxOf2DIndex(sites,0);
+    var yextents = getMinMaxOf2DIndex(sites,1);
+    console.log("xextents.min = ",xextents.min)
     var voronoi = d3.voronoi()
-        .extent([[-1, -1], [width + 1, height + 1]]);
+        .extent([[xextents.min-1, yextents.min-1], [xextents.max + 1, yextents.max + 1]]);
+
 
     var polygon = svg.append("g")
         .attr("class", "polygons")
@@ -237,7 +249,7 @@ function freqChange(option) {
 0.031788256,-0.037278954,-0.11437142,-41
 0.03286398,-0.036341358,-0.113565676,-41`;*/
         // https://stackoverflow.com/questions/41154231/d3-how-do-i-parse-a-csv-string-into-an-object-where-keys-are-column-names-and-v
-        console.log("parseMsg: msg = ",msg);
+        //console.log("parseMsg: msg = ",msg);
         var data = d3.csvParse(msg);
         var headers = d3.keys(data[0]);
         console.log("headers = ",headers)
@@ -251,7 +263,7 @@ function freqChange(option) {
                 myObject[key].push(d[key]);
             }
         });
-        console.log("myObject = ",myObject)
+        //console.log("myObject = ",myObject)
         return myObject;
     }
   
@@ -261,7 +273,7 @@ function freqChange(option) {
         //console.log("Message received: ",msg);
         var parsed = parseMsg(msg);
         var x = parsed.x;
-        console.log("x =  ",x);
+        //console.log("x =  ",x);
 
         var y = parsed.y;
         var z = parsed.z;
@@ -276,13 +288,19 @@ function freqChange(option) {
         // note: z never gets used. we use dB to do the coloring.
 
         npoints = x.length;
-        console.log("npoints = ",npoints);
-        console.log("x = ",x);
-        console.log("y = ",y);
-        console.log("dB = ",dB);
+        /*console.log("npoints = ",npoints);
+        //console.log("x = ",x);
+        //console.log("y = ",y);
+        //console.log("dB = ",dB);*/
 
         sites = d3.range(npoints)
          .map(function(d,i) { return [(x[i])*width/4+width/2, (-y[i])*height/4+height/4]; });
+
+         var xextents = getMinMaxOf2DIndex(sites,0);
+        var yextents = getMinMaxOf2DIndex(sites,1);
+        console.log("xextents.min = ",xextents.min)
+        var voronoi = d3.voronoi()
+            .extent([[xextents.min-1, yextents.min-1], [xextents.max + 1, yextents.max + 1]]);
 
         // Make the changes: Delete and re-generate
         svg.selectAll("g.polygons").remove();

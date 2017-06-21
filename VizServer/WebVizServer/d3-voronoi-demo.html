@@ -118,8 +118,19 @@ var showPolys = true;
 var g = svg.append("g")
     .attr("transform", "translate(" + 0+ "," + 0 + ")");
 
+
+function getMinMaxOf2DIndex (arr, idx) {
+    return {
+        min: Math.min.apply(null, arr.map(function (e) { return e[idx]})),
+        max: Math.max.apply(null, arr.map(function (e) { return e[idx]}))
+    }
+} 
+
+var xextents = getMinMaxOf2DIndex(sites,0);
+var yextents = getMinMaxOf2DIndex(sites,1);
+console.log("xextents.min = ",xextents.min)
 var voronoi = d3.voronoi()
-    .extent([[-1, -1], [width + 1, height + 1]]);
+    .extent([[xextents.min-1, yextents.min-1], [xextents.max + 1, yextents.max + 1]]);
 
 
 // We can add Delaunay Triangulation as well
