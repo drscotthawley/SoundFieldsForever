@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Visualizing Real-Time Point-Cloud Sound Intensity Data via Voronoi Tesselation</title>
+<meta property='og:title' content="Visualizing Real-Time Point-Cloud Sound Intensity Data via Voronoi Tesselation">
+<meta property="og:description" content="Here's a prototype of our sound field viz server, working with simulated data for room mode measurements." />
+<meta property="og:image" content="http://hedges.belmont.edu/~shawley/voronoi.png">
+<meta property="og:url" content="http://hedges.belmont.edu/~shawley/d3-voronoi-demo.html">
+<style>
+
+
+.polygons {
+  fill: none;
+  stroke: #000;
+}
+
+
+.sites {
+  fill: #000;
+  stroke: #fff;
+}
+
+.dropdown{
+    display: inline;
+}
+
+</style>
+</head>
+  <body>
+
+
+<h2>Visualizing Real-Time Point-Cloud Sound Intensity Data via Voronoi Tesselation</h2>
+This is for the Google Tango app project, which uses a client-server model whereby the Tango ("client")
+sends its measurements via WebSockets to this vizualization server.<br>
+Here's a prototype of our sound viz server.<br>
+You can pan and zoom. Yay!<br>
+This works best with the Chrome browser; Firefox is slow.<br>
+<br>
+
+
+  <button id="reset">Reset Zoom</button>
+    <button id="sitesToggle">Toggle Sites</button>
+    <button id="boundsToggle">Toggle Boundaries</button>
+
+    Filter frequency: <div class="dropdown"
+     <form>
+     <select id="freq" onchange="freqChange(this)" >
+        <option value="62.5" > 62.5 Hz</option>
+        <option value="125"> 125 Hz</option>
+        <option value="250" selected="selected"> 250 Hz</option>
+        <option value="500"> 500 Hz</option>
+        <option value="1000" >1000 Hz</option>
+        <option value="2000">2000 Hz</option>
+        <option value="Param">Param Eq</option>
+    </select>
+    </form>
+    </div>
+    
+ <br>
+    <svg width="500" height="500"></svg>
+
+
+    <ul id="messages"></ul>
+    <form action="">
+      <input id="m" autocomplete="off" /><button>Send</button>
+    </form>
+
+ <script src="/socket.io/socket.io.js"></script>
+<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+
+  //----------------------- WebSocket Handling
+  $(function () {
+    var socket = io();
+    $('form').submit(function(){
+      socket.emit('chat message', $('#m').val());
+      $('#m').val('');
+      return false;
+    });
+    socket.on('chat message', function(msg){   // We got a message!
+      //$('#messages').append($('<li>').text(msg));
+      applyNewMsg(msg);  
+    });
+  });
+
+  
+
+  //----------------------    Graph Handling
+
+  var margin = {top: 20, right: 20, bottom: 30, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+
+var svg = d3.select("svg"),
+    width = +svg.attr("width"),
+    height = +svg.attr("height");
+
+
+var zoom = d3.zoom()
+    .scaleExtent([.5, 40])
+    .translateExtent([[-100, -100], [width + 90, height + 100]])
+    .on("zoom", zoomed);
+
+
+transform = d3.zoomIdentity;
+
+
+    // Random data to start with
+    var npoints = 1000;
+    var sites = d3.range(npoints)
+        .map(function(d) { return [Math.random() * width, Math.random() * height]; });
+
+
+    // values  at data points / colors being mapped = "zvals"
+    var kx = 3.14159/(width*0.5);
+    var ky = 3.14159/(height*0.5);
+    var zvals = d3.range(npoints)
+    for (i = 0; i < npoints; i++) { 
+        zvals[i] = (1.0 + Math.cos(kx*sites[i][0]) * Math.cos(ky*sites[i][1]))/2.0;
+        zvals[i] *= zvals[i];
+    }
+    //  End random data
+
+   var showSites = true;
+    var showBounds = true;
+
+ 
+    var g = svg.append("g")
+        .attr("transform", "translate(" + 0+ "," + 0 + ")");
+
+    var voronoi = d3.voronoi()
+        .extent([[-1, -1], [width + 1, height + 1]]);
+
+    var polygon = svg.append("g")
+        .attr("class", "polygons")
+        .selectAll("path")
+        .data(voronoi.polygons(sites))
+        .enter().append("path")
+        .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
+        .call(redrawPolygon);
+
+    var site = svg.append("g")
+    .attr("class", "sites")
+    .selectAll("circle")
+    .data(sites)
+    .enter().append("circle")
+    .attr("r", 2.5)
+    .call(redrawSite);
+
+    function redrawPolygon(polygon) {
+      polygon
+          .attr("d", function(d) { return d ? "M" + d.join("L") + "Z" : null; });
+    }
+    function redrawSite(site) {
+      site
+      .attr("cx", function(d) { return d[0]; })
+      .attr("cy", function(d) { return d[1]; });
+    }
+
+
+    // Buttons
+d3.select("#reset").on("click", resetted);
+d3.select("#sitesToggle").on("click", function (d) { 
+    showSites = !showSites;
+    if (false==showSites) {
+        svg.selectAll("g.sites").style('fill','none'); 
+        svg.selectAll("g.sites").style('stroke','none');
+    } else {
+        svg.selectAll("g.sites").style('fill','#000'); 
+        svg.selectAll("g.sites").style('stroke','#fff');
+    }
+});
+d3.select("#boundsToggle").on("click", function (d) { 
+    showBounds = !showBounds;
+    if (false==showBounds) {
+        svg.selectAll("g.polygons").style('stroke', 'none'); 
+    } else {
+        svg.selectAll("g.polygons").style('stroke', '#000'); 
+    }
+});
+
+
+// Zooming
+svg.call(zoom);
+
+function zoomed() {
+    transform = d3.event.transform;
+    effect_zoom(transform);
+
+}
+function effect_zoom(transform) {
+    site.attr("transform", transform);
+    polygon.attr("transform", transform);
+}
+
+function resetted() {
+  svg.transition()
+      .duration(700)
+      .call(zoom.transform, d3.zoomIdentity);
+  transform = d3.zoomIdentity;
+}
+
+
+// Freq Change
+function freqChange(option) {
+    console.log(option.value);
+    freq = option.value*1.0
+    kx = 2.0*3.14159/(width*0.5)* (freq/basefreq);
+    ky = 2.0*3.14159/(height*0.5)*(freq/basefreq);
+    for (i = 0; i < npoints; i++) { 
+        zvals[i] = (1.0 + Math.cos(kx*sites[i][0]) * Math.cos(ky*sites[i][1]))/2.0;
+        zvals[i] *= zvals[i];
+    }
+    // Make the changes: Delete and re-generate
+    svg.selectAll("g.polygons")
+    .selectAll("path")
+      .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
+        .call(redrawPolygon);
+    if (false == showBounds) {
+        svg.selectAll("g.polygons").style('stroke', 'none'); 
+    }
+    //redrawSite();
+}
+
+
+
+    // When new socket messages come in
+    function parseMsg(msg) {
+
+        /* var msg = `x,y,z,dB
+0.029991373,-0.039875697,-0.115854755,-41
+0.03036066,-0.039075352,-0.11549742,-41
+0.03096545,-0.03815586,-0.11500641,-41
+0.031788256,-0.037278954,-0.11437142,-41
+0.03286398,-0.036341358,-0.113565676,-41`;*/
+        // https://stackoverflow.com/questions/41154231/d3-how-do-i-parse-a-csv-string-into-an-object-where-keys-are-column-names-and-v
+        console.log("parseMsg: msg = ",msg);
+        var data = d3.csvParse(msg);
+        var headers = d3.keys(data[0]);
+        console.log("headers = ",headers)
+
+        var myObject = {};
+        headers.forEach(function(d) {
+            myObject[d] = [];
+        });
+        data.forEach(function(d) {
+            for (var key in d) {
+                myObject[key].push(d[key]);
+            }
+        });
+        console.log("myObject = ",myObject)
+        return myObject;
+    }
+  
+
+
+    function applyNewMsg(msg) {
+        //console.log("Message received: ",msg);
+        var parsed = parseMsg(msg);
+        var x = parsed.x;
+        console.log("x =  ",x);
+
+        var y = parsed.y;
+        var z = parsed.z;
+        var dB = parsed.dB;
+        updateData(x,y,z,dB);
+    }
+
+
+  
+
+    function updateData(x,y,z,dB) {
+        // note: z never gets used. we use dB to do the coloring.
+
+        npoints = x.length;
+        console.log("npoints = ",npoints);
+        console.log("x = ",x);
+        console.log("y = ",y);
+        console.log("dB = ",dB);
+
+        sites = d3.range(npoints)
+         .map(function(d,i) { return [(x[i])*width/4+width/2, (-y[i])*height/4+height/4]; });
+
+        // Make the changes: Delete and re-generate
+        svg.selectAll("g.polygons").remove();
+        polygon = svg.append("g")
+          .attr("class", "polygons")
+        .selectAll("path")
+        .data(voronoi.polygons(sites))
+        .enter().append("path")
+        .style('fill', function(d,i){ return d3.hsl( dB[i]*310,        1, .5); })
+          .call(redrawPolygon);
+        if (false == showBounds) {
+          svg.selectAll("g.polygons").style('stroke', 'none'); 
+        }
+
+        svg.selectAll("g.sites").remove();
+        site = svg.append("g")
+        .attr("class", "sites")
+        .selectAll("circle")
+        .data(sites)
+        .enter().append("circle")
+        .attr("r", 2.5)
+        .call(redrawSite); 
+
+        if (false==showSites) {
+          svg.selectAll("g.sites").style('fill','none'); 
+          svg.selectAll("g.sites").style('stroke','none');
+        }
+        effect_zoom(transform);
+    }
+
+    
+</script>
+
+</body>
+</html>
+
