@@ -64,7 +64,7 @@ Filter frequency: <div class="dropdown"
 </select>
 </form>
 </div>
-(New data 'streams' in every few seconds)
+(Style=Triangles means no color, for now)
 
 <br>
 
@@ -192,9 +192,13 @@ d3.select("#sitesToggle").on("click", function (d) {
 d3.select("#boundsToggle").on("click", function (d) { 
     showBounds = !showBounds;
     if (false==showBounds) {
-        svg.selectAll("g.polygons").style('stroke', 'none'); 
+        svg.selectAll("g.polygons").selectAll("path").style('stroke', 'none'); 
+        svg.selectAll("g.triangles").selectAll("path").style('stroke', 'none'); 
     } else {
-        svg.selectAll("g.polygons").style('stroke', '#000'); 
+         if (showPolys) {
+            svg.selectAll("g.polygons").selectAll("path").style('stroke', '#000'); 
+        }
+        svg.selectAll("g.triangles").selectAll("path").style('stroke', '#000'); 
     }
 });
 
@@ -248,11 +252,9 @@ function styleChange(option) {
     if ('Triangles'== option.value) {
         console.log("TODO: Not sure how to color the triangles yet")
         showPolys = false;
-        showBounds = false;
         svg.selectAll("g.polygons").selectAll("path").style('fill', 'none').style('stroke', 'none'); 
     } else {
         showPolys = true;
-        showBounds = true;
         svg.selectAll("g.polygons").selectAll("path").style('stroke', '#000')
         .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
 
@@ -291,7 +293,9 @@ function updateData() {
         .style('fill', 'none')
         .style('stroke','#000')
         .call(redrawTriangle);
-
+    if (false == showBounds) {
+        svg.selectAll("g.triangles").selectAll("path").style('stroke', 'none'); 
+    }
 
     svg.selectAll("g.polygons").remove();
     polygon = svg.append("g")
@@ -301,7 +305,7 @@ function updateData() {
         .enter().append("path")
         .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
         .call(redrawPolygon);
-    if (false == showBounds) {
+    if ((false == showBounds) || (false==showPolys)) {
         svg.selectAll("g.polygons").style('stroke', 'none'); 
     }
     if (false == showPolys) {
