@@ -266,8 +266,9 @@ function styleChange(option) {
         svg.selectAll("g.polygons").selectAll("path").style('fill', 'none').style('stroke', 'none'); 
     } else {
         showPolys = true;
-        svg.selectAll("g.polygons").selectAll("path").style('stroke', '#000')
-        .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
+        svg.selectAll("g.polygons").selectAll("path")
+            .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
+            .style('stroke', '#000')
 
     }
 }
@@ -288,7 +289,7 @@ function updateData() {
     sites = d3.range(npoints)
        .map(function(d) { return [Math.random() * width, Math.random() * height]; });
 
-    var zvals = d3.range(npoints)
+    zvals = d3.range(npoints)
     for (i = 0; i < npoints; i++) { 
         zvals[i] = (1.0 + Math.cos(kx*sites[i][0]) * Math.cos(ky*sites[i][1]))/2.0;
         zvals[i] *= zvals[i];
