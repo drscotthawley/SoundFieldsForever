@@ -11,7 +11,7 @@ def on_bbb_response(*args):
 with open('sample_data.csv', 'r') as myfile:
     data_string =myfile.read()
 
-hostname = 'localhost'
+hostname = 'hedges.belmont.edu'
 port = 3000
 
 with SocketIO(hostname, port, LoggingNamespace) as socketIO:
