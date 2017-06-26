@@ -219,6 +219,7 @@ function resetted() {
 // Freq Change
 function freqChange(option) {
     console.log(option.value);
+    basefreq = 250.0;
     freq = option.value*1.0
     kx = 2.0*3.14159/(width*0.5)* (freq/basefreq);
     ky = 2.0*3.14159/(height*0.5)*(freq/basefreq);
