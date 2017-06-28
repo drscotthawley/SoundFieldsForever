@@ -56,7 +56,7 @@ This works best with the Chrome browser; Firefox is slow.<br>
     </select>
     </form>
     </div>
-    
+
  <br>
     <svg width="500" height="500"></svg>
 
@@ -81,11 +81,11 @@ This works best with the Chrome browser; Firefox is slow.<br>
     });
     socket.on('chat message', function(msg){   // We got a message!
       //$('#messages').append($('<li>').text(msg));
-      applyNewMsg(msg);  
+      applyNewMsg(msg);
     });
   });
 
-  
+
 
   //----------------------    Graph Handling
 
@@ -118,7 +118,7 @@ transform = d3.zoomIdentity;
     var kx = 3.14159/(width*0.5);
     var ky = 3.14159/(height*0.5);
     var zvals = d3.range(npoints)
-    for (i = 0; i < npoints; i++) { 
+    for (i = 0; i < npoints; i++) {
         zvals[i] = (1.0 + Math.cos(kx*sites[i][0]) * Math.cos(ky*sites[i][1]))/2.0;
         zvals[i] *= zvals[i];
     }
@@ -127,18 +127,18 @@ transform = d3.zoomIdentity;
    var showSites = true;
     var showBounds = true;
 
- 
+
     var g = svg.append("g")
         .attr("transform", "translate(" + 0+ "," + 0 + ")");
 
 
-    
+
     function getMinMaxOf2DIndex (arr, idx) { //https://stackoverflow.com/questions/23396945/getting-the-min-and-max-value-in-javascript-but-from-a-2d-array
         return {
             min: Math.min.apply(null, arr.map(function (e) { return e[idx]})),
             max: Math.max.apply(null, arr.map(function (e) { return e[idx]}))
         }
-    } 
+    }
     var xextents = getMinMaxOf2DIndex(sites,0);
     var yextents = getMinMaxOf2DIndex(sites,1);
     console.log("xextents.min = ",xextents.min)
@@ -175,22 +175,22 @@ transform = d3.zoomIdentity;
 
     // Buttons
 d3.select("#reset").on("click", resetted);
-d3.select("#sitesToggle").on("click", function (d) { 
+d3.select("#sitesToggle").on("click", function (d) {
     showSites = !showSites;
     if (false==showSites) {
-        svg.selectAll("g.sites").style('fill','none'); 
+        svg.selectAll("g.sites").style('fill','none');
         svg.selectAll("g.sites").style('stroke','none');
     } else {
-        svg.selectAll("g.sites").style('fill','#000'); 
+        svg.selectAll("g.sites").style('fill','#000');
         svg.selectAll("g.sites").style('stroke','#fff');
     }
 });
-d3.select("#boundsToggle").on("click", function (d) { 
+d3.select("#boundsToggle").on("click", function (d) {
     showBounds = !showBounds;
     if (false==showBounds) {
-        svg.selectAll("g.polygons").style('stroke', 'none'); 
+        svg.selectAll("g.polygons").style('stroke', 'none');
     } else {
-        svg.selectAll("g.polygons").style('stroke', '#000'); 
+        svg.selectAll("g.polygons").style('stroke', '#000');
     }
 });
 
@@ -223,7 +223,7 @@ function freqChange(option) {
     freq = option.value*1.0
     kx = 2.0*3.14159/(width*0.5)* (freq/basefreq);
     ky = 2.0*3.14159/(height*0.5)*(freq/basefreq);
-    for (i = 0; i < npoints; i++) { 
+    for (i = 0; i < npoints; i++) {
         zvals[i] = (1.0 + Math.cos(kx*sites[i][0]) * Math.cos(ky*sites[i][1]))/2.0;
         zvals[i] *= zvals[i];
     }
@@ -233,7 +233,7 @@ function freqChange(option) {
       .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
         .call(redrawPolygon);
     if (false == showBounds) {
-        svg.selectAll("g.polygons").style('stroke', 'none'); 
+        svg.selectAll("g.polygons").style('stroke', 'none');
     }
     //redrawSite();
 }
@@ -267,7 +267,7 @@ function freqChange(option) {
         //console.log("myObject = ",myObject)
         return myObject;
     }
-  
+
 
 
     function applyNewMsg(msg) {
@@ -283,7 +283,7 @@ function freqChange(option) {
     }
 
 
-  
+
 
     function updateData(x,y,z,dB) {
         // note: z never gets used. we use dB to do the coloring.
@@ -293,9 +293,47 @@ function freqChange(option) {
         //console.log("x = ",x);
         //console.log("y = ",y);
         //console.log("dB = ",dB);*/
+        x = x.map(Number);
+        y = y.map(Number);
+
+        //scale world coordinates to screen coordinates
+        xMin = Math.min.apply(Math, x);
+        xMax = Math.max.apply(Math, x);
+        yMin = Math.min.apply(Math, y);
+        yMax = Math.max.apply(Math, y);
+
+        xScale = width / (xMax-xMin);
+        yScale = height / (yMax-yMin);
+        uniScale = xScale;   // use the same (smaller) scale in x & y
+        if (yScale < xScale) {
+          uniScale = yScale;
+        }
+        xScreen = x.map(function(q) { return (q - xMin) * uniScale; });
+        yScreen = y.map(function(q) { return (q - yMin) * uniScale; });
 
         sites = d3.range(npoints)
-         .map(function(d,i) { return [(x[i])*width/4+width/2, (-y[i])*height/4+height/4]; });
+         .map(function(d,i) { return [(xScreen[i]), (yScreen[i])]; });
+
+
+
+
+        // scale dB -> color
+        dB = dB.map(Number);
+        dBMax = Math.max.apply(Math, dB);
+        dBMin = Math.min.apply(Math,dB);
+        console.log("dBMin =",dBMin,", dBMax =",dBMax);
+        console.log("dB[0] = ",dB[0]);
+        colors = dB.map(function(x) { return x - dBMin; });
+
+        colorMax = Math.max.apply(Math, colors);
+        colorMin = Math.min.apply(Math, colors);
+        intendedColorRange = 310;
+        colorScaleFactor = intendedColorRange/(colorMax - colorMin) + colorMin;
+        console.log("colors[0] = ",colors[0]);
+        console.log("colorScaleFactor = ",colorScaleFactor);
+
+        console.log("colorMin =",colorMin,", colorMax =",colorMax);
+
 
          var xextents = getMinMaxOf2DIndex(sites,0);
         var yextents = getMinMaxOf2DIndex(sites,1);
@@ -310,10 +348,10 @@ function freqChange(option) {
         .selectAll("path")
         .data(voronoi.polygons(sites))
         .enter().append("path")
-        .style('fill', function(d,i){ return d3.hsl( dB[i]*310,        1, .5); })
+        .style('fill', function(d,i){ return d3.hsl( colors[i]*colorScaleFactor,        1, .5); })
           .call(redrawPolygon);
         if (false == showBounds) {
-          svg.selectAll("g.polygons").style('stroke', 'none'); 
+          svg.selectAll("g.polygons").style('stroke', 'none');
         }
 
         svg.selectAll("g.sites").remove();
@@ -323,18 +361,17 @@ function freqChange(option) {
         .data(sites)
         .enter().append("circle")
         .attr("r", 2.5)
-        .call(redrawSite); 
+        .call(redrawSite);
 
         if (false==showSites) {
-          svg.selectAll("g.sites").style('fill','none'); 
+          svg.selectAll("g.sites").style('fill','none');
           svg.selectAll("g.sites").style('stroke','none');
         }
         effect_zoom(transform);
     }
 
-    
+
 </script>
 
 </body>
 </html>
-
