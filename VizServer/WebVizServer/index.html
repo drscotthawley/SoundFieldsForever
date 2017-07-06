@@ -27,7 +27,7 @@
 
 </style>
 </head>
-  <body>
+<body>
 
 
 <h2>Visualizing Real-Time Point-Cloud Sound Intensity Data via Voronoi Tesselation</h2>
@@ -39,34 +39,29 @@ This works best with the Chrome browser; Firefox is slow.<br>
 <br>
 
 
-  <button id="reset">Reset Zoom</button>
-    <button id="sitesToggle">Toggle Sites</button>
-    <button id="boundsToggle">Toggle Boundaries</button>
+<button id="reset">Reset Zoom</button>
+<button id="sitesToggle">Toggle Sites</button>
+<button id="boundsToggle">Toggle Boundaries</button>
 
-    Filter frequency: <div class="dropdown"
-     <form>
-     <select id="freq" onchange="freqChange(this)" >
-        <option value="62.5" > 62.5 Hz</option>
-        <option value="125"> 125 Hz</option>
-        <option value="250" selected="selected"> 250 Hz</option>
-        <option value="500"> 500 Hz</option>
-        <option value="1000" >1000 Hz</option>
-        <option value="2000">2000 Hz</option>
-        <option value="Param">Param Eq</option>
-    </select>
-    </form>
-    </div>
+Filter frequency:
+<div class="dropdown"
+  <form>
+       <select id="freq" onchange="freqChange(this)" >
+          <option value="62.5" > 62.5 Hz</option>
+          <option value="125"> 125 Hz</option>
+          <option value="250" selected="selected"> 250 Hz</option>
+          <option value="500"> 500 Hz</option>
+          <option value="1000" >1000 Hz</option>
+          <option value="2000">2000 Hz</option>
+          <option value="Param">Param Eq</option>
+      </select>
+  </form>
+</div>
 
  <br>
-    <svg width="500" height="500"></svg>
+<svg width="500" height="500"></svg>
 
-
-    <!-- <ul id="messages"></ul>
-    <form action="">
-      <input id="m" autocomplete="off" /><button>Send</button>
-    </form> -->
-
- <script src="/socket.io/socket.io.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
@@ -89,24 +84,25 @@ This works best with the Chrome browser; Firefox is slow.<br>
 
   //----------------------    Graph Handling
 
-  var margin = {top: 20, right: 20, bottom: 30, left: 40},
-    width = 960 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
+    var margin = {top: 20, right: 20, bottom: 30, left: 40},
+      width = 960 - margin.left - margin.right,
+      height = 500 - margin.top - margin.bottom;
 
 
-var svg = d3.select("svg"),
-    width = +svg.attr("width"),
-    height = +svg.attr("height");
+    var svg = d3.select("svg"),
+        width = +svg.attr("width"),
+        height = +svg.attr("height");
+
+    var colorBar = d3.select("body")
+            .append("svg")
+
+    var zoom = d3.zoom()
+        .scaleExtent([.5, 40])
+        .translateExtent([[-100, -100], [width + 90, height + 100]])
+        .on("zoom", zoomed);
 
 
-var zoom = d3.zoom()
-    .scaleExtent([.5, 40])
-    .translateExtent([[-100, -100], [width + 90, height + 100]])
-    .on("zoom", zoomed);
-
-
-transform = d3.zoomIdentity;
-
+    transform = d3.zoomIdentity;
 
     // Random data to start with
     var npoints = 1000;
@@ -124,13 +120,11 @@ transform = d3.zoomIdentity;
     }
     //  End random data
 
-   var showSites = true;
+    var showSites = true;
     var showBounds = true;
-
 
     var g = svg.append("g")
         .attr("transform", "translate(" + 0+ "," + 0 + ")");
-
 
 
     function getMinMaxOf2DIndex (arr, idx) { //https://stackoverflow.com/questions/23396945/getting-the-min-and-max-value-in-javascript-but-from-a-2d-array
@@ -139,6 +133,7 @@ transform = d3.zoomIdentity;
             max: Math.max.apply(null, arr.map(function (e) { return e[idx]}))
         }
     }
+
     var xextents = getMinMaxOf2DIndex(sites,0);
     var yextents = getMinMaxOf2DIndex(sites,1);
     console.log("xextents.min = ",xextents.min)
@@ -174,69 +169,69 @@ transform = d3.zoomIdentity;
 
 
     // Buttons
-d3.select("#reset").on("click", resetted);
-d3.select("#sitesToggle").on("click", function (d) {
-    showSites = !showSites;
-    if (false==showSites) {
-        svg.selectAll("g.sites").style('fill','none');
-        svg.selectAll("g.sites").style('stroke','none');
-    } else {
-        svg.selectAll("g.sites").style('fill','#000');
-        svg.selectAll("g.sites").style('stroke','#fff');
+    d3.select("#reset").on("click", resetted);
+    d3.select("#sitesToggle").on("click", function (d) {
+        showSites = !showSites;
+        if (false==showSites) {
+            svg.selectAll("g.sites").style('fill','none');
+            svg.selectAll("g.sites").style('stroke','none');
+        } else {
+            svg.selectAll("g.sites").style('fill','#000');
+            svg.selectAll("g.sites").style('stroke','#fff');
+        }
+    });
+    d3.select("#boundsToggle").on("click", function (d) {
+        showBounds = !showBounds;
+        if (false==showBounds) {
+            svg.selectAll("g.polygons").style('stroke', 'none');
+        } else {
+            svg.selectAll("g.polygons").style('stroke', '#000');
+        }
+    });
+
+
+    // Zooming
+    svg.call(zoom);
+
+    function zoomed() {
+        transform = d3.event.transform;
+        effect_zoom(transform);
+
     }
-});
-d3.select("#boundsToggle").on("click", function (d) {
-    showBounds = !showBounds;
-    if (false==showBounds) {
-        svg.selectAll("g.polygons").style('stroke', 'none');
-    } else {
-        svg.selectAll("g.polygons").style('stroke', '#000');
+    function effect_zoom(transform) {
+        site.attr("transform", transform);
+        polygon.attr("transform", transform);
     }
-});
 
-
-// Zooming
-svg.call(zoom);
-
-function zoomed() {
-    transform = d3.event.transform;
-    effect_zoom(transform);
-
-}
-function effect_zoom(transform) {
-    site.attr("transform", transform);
-    polygon.attr("transform", transform);
-}
-
-function resetted() {
-  svg.transition()
-      .duration(700)
-      .call(zoom.transform, d3.zoomIdentity);
-  transform = d3.zoomIdentity;
-}
-
-
-// Freq Change
-function freqChange(option) {
-    console.log(option.value);
-    basefreq = 250.0;
-    freq = option.value*1.0
-    kx = 2.0*3.14159/(width*0.5)* (freq/basefreq);
-    ky = 2.0*3.14159/(height*0.5)*(freq/basefreq);
-    for (i = 0; i < npoints; i++) {
-        zvals[i] = (1.0 + Math.cos(kx*sites[i][0]) * Math.cos(ky*sites[i][1]))/2.0;
-        zvals[i] *= zvals[i];
+    function resetted() {
+      svg.transition()
+          .duration(700)
+          .call(zoom.transform, d3.zoomIdentity);
+      transform = d3.zoomIdentity;
     }
-    // Make the changes: Delete and re-generate
-    svg.selectAll("g.polygons")
-    .selectAll("path")
-      .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
-        .call(redrawPolygon);
-    if (false == showBounds) {
-        svg.selectAll("g.polygons").style('stroke', 'none');
+
+
+    // Freq Change
+    function freqChange(option) {
+        console.log(option.value);
+        basefreq = 250.0;
+        freq = option.value*1.0
+        kx = 2.0*3.14159/(width*0.5)* (freq/basefreq);
+        ky = 2.0*3.14159/(height*0.5)*(freq/basefreq);
+        for (i = 0; i < npoints; i++) {
+            zvals[i] = (1.0 + Math.cos(kx*sites[i][0]) * Math.cos(ky*sites[i][1]))/2.0;
+            zvals[i] *= zvals[i];
+        }
+        // Make the changes: Delete and re-generate
+        svg.selectAll("g.polygons")
+        .selectAll("path")
+          .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
+            .call(redrawPolygon);
+        if (false == showBounds) {
+            svg.selectAll("g.polygons").style('stroke', 'none');
+        }
+        //redrawSite();
     }
-    //redrawSite();
-}
 
 
 
@@ -278,14 +273,22 @@ function freqChange(option) {
 
         var y = parsed.y;
         var z = parsed.z;
-        var dB = parsed.dB;
-        updateData(x,y,z,dB);
+        var dB = parsed.dB;    # Fullband-averaged dB value
+        var dB0 = parsed.dB0;  # dB in lowest freq band (63Hz)
+        var dB1 = parsed.dB1;  # dB in next freq band (125Hz)
+        var dB2 = parsed.dB2;  # dB in next freq band (250Hz)
+        var dB3 = parsed.dB3;  # dB in next freq band (500Hz)
+        var dB4 = parsed.dB4;  # dB in next freq band (1kHz)
+        var dB5 = parsed.dB5;  # dB in next freq band (2kHz)
+        var dB6 = parsed.dB6;  # dB in next freq band (4kHz)
+
+        updateData(x,y,z,dB,dB0,dB1,dB2,dB3,dB4,dB5,dB6);
     }
 
 
 
 
-    function updateData(x,y,z,dB) {
+    function updateData(x,y,z,dB,dB0,dB1,dB2,dB3,dB4,dB5,dB6) {
         // note: z never gets used. we use dB to do the coloring.
 
         npoints = x.length;
@@ -335,7 +338,7 @@ function freqChange(option) {
         console.log("colorMin =",colorMin,", colorMax =",colorMax);
 
 
-         var xextents = getMinMaxOf2DIndex(sites,0);
+        var xextents = getMinMaxOf2DIndex(sites,0);
         var yextents = getMinMaxOf2DIndex(sites,1);
         console.log("xextents.min = ",xextents.min)
         var voronoi = d3.voronoi()
