@@ -46,14 +46,15 @@ This works best with the Chrome browser; Firefox is slow.<br>
 Filter frequency:
 <div class="dropdown"
   <form>
-       <select id="freq" onchange="freqChange(this)" >
-          <option value="62.5" > 62.5 Hz</option>
-          <option value="125"> 125 Hz</option>
-          <option value="250" selected="selected"> 250 Hz</option>
-          <option value="500"> 500 Hz</option>
-          <option value="1000" >1000 Hz</option>
-          <option value="2000">2000 Hz</option>
-          <option value="Param">Param Eq</option>
+       <select id="freqDropDown" onchange="freqChange(this)" >
+          <option value="0" selected="selected"> All freqs</option>
+          <option value="1"> 62.5 Hz</option>
+          <option value="2"> 125 Hz</option>
+          <option value="3"> 250 Hz</option>
+          <option value="4"> 500 Hz</option>
+          <option value="5">1000 Hz</option>
+          <option value="6">2000 Hz</option>
+          <option value="7">4000 Hz</option>
       </select>
   </form>
 </div>
@@ -110,13 +111,18 @@ Filter frequency:
         .map(function(d) { return [Math.random() * width, Math.random() * height]; });
 
 
-    // values  at data points / colors being mapped = "zvals"
+    // values  at data points / colors being mapped = "dBvals"
     var kx = 3.14159/(width*0.5);
     var ky = 3.14159/(height*0.5);
-    var zvals = d3.range(npoints)
-    for (i = 0; i < npoints; i++) {
-        zvals[i] = (1.0 + Math.cos(kx*sites[i][0]) * Math.cos(ky*sites[i][1]))/2.0;
-        zvals[i] *= zvals[i];
+    nZBins = 8;
+    var dBvals = [ d3.range(npoints), d3.range(npoints), d3.range(npoints), d3.range(npoints),
+                   d3.range(npoints), d3.range(npoints), d3.range(npoints), d3.range(npoints)];
+
+    for (j = 0; j < nZBins; j++) {
+      for (i = 0; i < npoints; i++) {
+          dBvals[j][i] = (1.0 + Math.cos((j+1)*kx*sites[i][0]) * Math.cos((j+1)*ky*sites[i][1]))/2.0;
+          dBvals[j][i] *= dBvals[j][i];
+      }
     }
     //  End random data
 
@@ -146,7 +152,7 @@ Filter frequency:
         .selectAll("path")
         .data(voronoi.polygons(sites))
         .enter().append("path")
-        .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
+        .style('fill', function(d,i){ return d3.hsl( dBvals[0][i]*310,        1, .5); })
         .call(redrawPolygon);
 
     var site = svg.append("g")
@@ -214,18 +220,19 @@ Filter frequency:
     // Freq Change
     function freqChange(option) {
         console.log(option.value);
-        basefreq = 250.0;
-        freq = option.value*1.0
+        //basefreq = 250.0;
+        //freq = option.value*1.0
+        freqBin = option.value;
+        /*
         kx = 2.0*3.14159/(width*0.5)* (freq/basefreq);
         ky = 2.0*3.14159/(height*0.5)*(freq/basefreq);
         for (i = 0; i < npoints; i++) {
-            zvals[i] = (1.0 + Math.cos(kx*sites[i][0]) * Math.cos(ky*sites[i][1]))/2.0;
-            zvals[i] *= zvals[i];
-        }
-        // Make the changes: Delete and re-generate
+            dBvals[0][i] = (1.0 + Math.cos(kx*sites[i][0]) * Math.cos(ky*sites[i][1]))/2.0;
+            dBvals[0][i] *= dBvals[0][i];
+        }*/
         svg.selectAll("g.polygons")
         .selectAll("path")
-          .style('fill', function(d,i){ return d3.hsl( zvals[i]*310,        1, .5); })
+          .style('fill', function(d,i){ return d3.hsl( dBvals[freqBin][i]*310,        1, .5); })
             .call(redrawPolygon);
         if (false == showBounds) {
             svg.selectAll("g.polygons").style('stroke', 'none');
@@ -273,14 +280,14 @@ Filter frequency:
 
         var y = parsed.y;
         var z = parsed.z;
-        var dB = parsed.dB;    # Fullband-averaged dB value
-        var dB0 = parsed.dB0;  # dB in lowest freq band (63Hz)
-        var dB1 = parsed.dB1;  # dB in next freq band (125Hz)
-        var dB2 = parsed.dB2;  # dB in next freq band (250Hz)
-        var dB3 = parsed.dB3;  # dB in next freq band (500Hz)
-        var dB4 = parsed.dB4;  # dB in next freq band (1kHz)
-        var dB5 = parsed.dB5;  # dB in next freq band (2kHz)
-        var dB6 = parsed.dB6;  # dB in next freq band (4kHz)
+        var dB = parsed.dB;    // Fullband-averaged dB value
+        var dB0 = parsed.dB0;  // dB in lowest freq band (63Hz)
+        var dB1 = parsed.dB1;  // dB in next freq band (125Hz)
+        var dB2 = parsed.dB2;  // dB in next freq band (250Hz)
+        var dB3 = parsed.dB3;  // dB in next freq band (500Hz)
+        var dB4 = parsed.dB4;  // dB in next freq band (1kHz)
+        var dB5 = parsed.dB5;  // dB in next freq band (2kHz)
+        var dB6 = parsed.dB6;  // dB in next freq band (4kHz)
 
         updateData(x,y,z,dB,dB0,dB1,dB2,dB3,dB4,dB5,dB6);
     }
@@ -298,6 +305,18 @@ Filter frequency:
         //console.log("dB = ",dB);*/
         x = x.map(Number);
         y = y.map(Number);
+        dBvals[0] = dB.map(Number);
+        dBvals[1] = dB0.map(Number);
+        dBvals[2] = dB1.map(Number);
+        dBvals[3] = dB2.map(Number);
+        dBvals[4] = dB3.map(Number);
+        dBvals[5] = dB4.map(Number);
+        dBvals[6] = dB5.map(Number);
+        dBvals[7] = dB6.map(Number);
+
+
+        var dBIndex = document.getElementById("freqDropDown").value;
+        console.log("Dropdown index = ",dBIndex);
 
         //scale world coordinates to screen coordinates
         xMin = Math.min.apply(Math, x);
@@ -321,12 +340,11 @@ Filter frequency:
 
 
         // scale dB -> color
-        dB = dB.map(Number);
-        dBMax = Math.max.apply(Math, dB);
-        dBMin = Math.min.apply(Math,dB);
+        dB_plot = dBvals[dBIndex];
+        dBMax = Math.max.apply(Math, dB_plot);
+        dBMin = Math.min.apply(Math,  dB_plot);
         console.log("dBMin =",dBMin,", dBMax =",dBMax);
-        console.log("dB[0] = ",dB[0]);
-        colors = dB.map(function(x) { return x - dBMin; });
+        colors = dB_plot.map(function(q) { return q - dBMin; });
 
         colorMax = Math.max.apply(Math, colors);
         colorMin = Math.min.apply(Math, colors);
@@ -344,9 +362,8 @@ Filter frequency:
         var voronoi = d3.voronoi()
             .extent([[xextents.min-1, yextents.min-1], [xextents.max + 1, yextents.max + 1]]);
 
-        // Make the changes: Delete and re-generate
-        svg.selectAll("g.polygons").remove();
-        polygon = svg.append("g")
+        svg.selectAll("g.polygons").remove(); // delete old polygons
+        polygon = svg.append("g")             // add new polygons
           .attr("class", "polygons")
         .selectAll("path")
         .data(voronoi.polygons(sites))
@@ -357,8 +374,8 @@ Filter frequency:
           svg.selectAll("g.polygons").style('stroke', 'none');
         }
 
-        svg.selectAll("g.sites").remove();
-        site = svg.append("g")
+        svg.selectAll("g.sites").remove();  // delete old sites
+        site = svg.append("g")              // add new sites
         .attr("class", "sites")
         .selectAll("circle")
         .data(sites)
