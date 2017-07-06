@@ -4,12 +4,13 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.SeekBar;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,16 +24,8 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
-import com.koushikdutta.async.ByteBufferList;
-import com.koushikdutta.async.DataEmitter;
-import com.koushikdutta.async.callback.DataCallback;
-import com.koushikdutta.async.http.AsyncHttpClient;
-import com.koushikdutta.async.http.WebSocket;
 import com.projecttango.tangosupport.TangoSupport;
 
-import org.java_websocket.client.WebSocketClient;
-
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -53,15 +46,11 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView xValue;
     private TextView yValue;
-    private TextView zValue;
-    private TextView bandPassF;
+    private EditText setFreq;
     private Button vButton;
-    private View root;
-    private View someView;
+    private ConstraintLayout layout;
 
     private RecordingThread mRecordingThread;
-
-    private static WebSocketClient mWebSocketClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,13 +64,18 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        xValue = (TextView) findViewById(R.id.textView_xValue);
-        yValue = (TextView) findViewById(R.id.textView_yValue);
-        zValue = (TextView) findViewById(R.id.textView_zValue);
-        vButton = (Button) findViewById(R.id.button_collectionState);
-        bandPassF = (TextView) findViewById(R.id.textView_bandpassF);
-        SeekBar frequencySeek = (SeekBar) findViewById(R.id.seekBar_frequency);
-        frequencySeek.setOnSeekBarChangeListener(onProgressChanged);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                layout = (ConstraintLayout) findViewById(R.id.constraintLayout);
+                xValue = (TextView) findViewById(R.id.textView_xValue);
+                yValue = (TextView) findViewById(R.id.textView_yValue);
+                vButton = (Button) findViewById(R.id.button_collectionState);
+                setFreq = (EditText) findViewById(R.id.editTextFrequency);
+            }
+        });
+
+        setFreq.setText(mRecordingThread.centerFrequency + "");
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 0);
@@ -91,32 +85,7 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
         }
 
-        try {
-            connectWebSocket();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-
     }
-
-    private SeekBar.OnSeekBarChangeListener onProgressChanged =
-            new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    bandPassF.setText(progress + "");
-                    mRecordingThread.centerFrequency = progress;
-                }
-
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {
-
-                }
-
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {
-
-                }
-            };
 
     @Override
     protected void onResume() {
@@ -206,17 +175,6 @@ public class MainActivity extends AppCompatActivity {
                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                 TangoPoseData.COORDINATE_FRAME_DEVICE));
 
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(MainActivity.this, "Setting Frames",
-                        Toast.LENGTH_LONG).show();
-            }
-        });
-
-        someView = findViewById(R.id.constraintLayout);
-
-
         // Listen for new Tango data.
         mTango.connectListener(framePairs, new Tango.TangoUpdateCallback() {
             @Override
@@ -229,21 +187,20 @@ public class MainActivity extends AppCompatActivity {
                     framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
 
                     TangoPoseData timePose = mTango.getPoseAtTime(pose.timestamp, framePair);
-                    root = someView.getRootView();
 
                     // Gets rms value for microphone input
-                    double rms = mRecordingThread.getRmsdB();
+                    double rmsDb = mRecordingThread.getRmsdB();
 
 //                  Math.round(pose.timestamp * 10)%2==0 reduces the amount of UI manipulation
+//
                     if(isCapturingData && Math.round(pose.timestamp * 10)%2==0) {
-                        if (rms > -9000) {
+                        if (rmsDb > -9000 && rmsDb != 0) {
                             mIsTangoPoseReady.compareAndSet(false, true);
                             final float[] xyz = timePose.getTranslationAsFloats();
 
-                            final PointTimeData newNode = new PointTimeData(xyz, rms);
+                            final PointTimeData newNode = new PointTimeData(xyz, rmsDb);
                             currentNode.setNextNode(newNode);
                             currentNode = currentNode.getNextNode();
-                            Log.i(TAG, pose.timestamp + "");
 
                             runOnUiThread(new Runnable() {
 
@@ -252,9 +209,8 @@ public class MainActivity extends AppCompatActivity {
                                     //stuff that updates ui
                                     xValue.setText(String.valueOf(xyz[0]));
                                     yValue.setText(String.valueOf(xyz[1]));
-//                                    zValue.setText(String.valueOf(xyz[2]));
 
-                                    int dbInInt = (int) Math.round(newNode.getDb());
+                                    int dbInInt = (int) newNode.getDb();
                                     vButton.setText(String.valueOf(dbInInt));
                                     setBackgroundColor(dbInInt);
                                 }
@@ -296,27 +252,27 @@ public class MainActivity extends AppCompatActivity {
 
     private void setBackgroundColor(int dbInInt) {
         if (dbInInt > 0) {
-            root.setBackgroundColor(Color.parseColor("#f44242"));
+            vButton.setBackgroundColor(Color.parseColor("#f44242"));
         } else if (dbInInt > -10) {
-            root.setBackgroundColor(Color.parseColor("#f4417a"));
+            vButton.setBackgroundColor(Color.parseColor("#f4417a"));
         } else if (dbInInt > -25) {
-            root.setBackgroundColor(Color.parseColor("#f4419a"));
+            vButton.setBackgroundColor(Color.parseColor("#f4419a"));
         } else if (dbInInt > -30) {
-            root.setBackgroundColor(Color.parseColor("#f441df"));
+            vButton.setBackgroundColor(Color.parseColor("#f441df"));
         } else if (dbInInt > -45) {
-            root.setBackgroundColor(Color.parseColor("#d041f4"));
+            vButton.setBackgroundColor(Color.parseColor("#d041f4"));
         } else if (dbInInt > -60) {
-            root.setBackgroundColor(Color.parseColor("#b541f4"));
+            vButton.setBackgroundColor(Color.parseColor("#b541f4"));
         } else if (dbInInt > -85) {
-            root.setBackgroundColor(Color.parseColor("#8841f4"));
+            vButton.setBackgroundColor(Color.parseColor("#8841f4"));
         } else if (dbInInt > -100) {
-            root.setBackgroundColor(Color.parseColor("#6d41f4"));
+            vButton.setBackgroundColor(Color.parseColor("#6d41f4"));
         } else if (dbInInt > -115) {
-            root.setBackgroundColor(Color.parseColor("#4143f4"));
+            vButton.setBackgroundColor(Color.parseColor("#4143f4"));
         } else if (dbInInt > -130) {
-            root.setBackgroundColor(Color.parseColor("#283396"));
+            vButton.setBackgroundColor(Color.parseColor("#283396"));
         } else {
-            root.setBackgroundColor(Color.parseColor("#1b236d"));
+            vButton.setBackgroundColor(Color.parseColor("#1b236d"));
         }
     }
 
@@ -344,11 +300,8 @@ public class MainActivity extends AppCompatActivity {
             v.setTextSize(16);
             v.setText("Saving Data");
             isCapturingData = false;
-            root.setBackgroundColor(Color.parseColor("#ffffff"));
 
-            // Connects the WebSocket
-//            connectWebSocket();
-            boolean written = DiskWrite.writeToDisk(MainActivity.this, nodeListStart, mWebSocketClient);
+            boolean written = DiskWrite.writeToDisk(MainActivity.this, nodeListStart);
             while (written != true) {
             }
             runOnUiThread(new Runnable() {
@@ -362,34 +315,18 @@ public class MainActivity extends AppCompatActivity {
             mRecordingThread.startRecording();
             isCapturingData = true;
             v.setTextSize(40);
-
         }
     }
     
-    private void connectWebSocket() throws URISyntaxException {
-        AsyncHttpClient.getDefaultInstance().websocket("wss://echo.websocket.org", "my-protocol", new AsyncHttpClient.WebSocketConnectCallback() {
+    public void setFrequency(View view) {
+        runOnUiThread(new Runnable() {
             @Override
-            public void onCompleted(Exception ex, WebSocket webSocket) {
-                if (ex != null) {
-                    ex.printStackTrace();
-                    return;
-                }
-                webSocket.send("a string");
-                webSocket.send(new byte[10]);
-                webSocket.setStringCallback(new WebSocket.StringCallback() {
-                    public void onStringAvailable(String s) {
-                        System.out.println("I got a string: " + s);
-                    }
-                });
-                webSocket.setDataCallback(new DataCallback() {
-                    public void onDataAvailable(DataEmitter emitter, ByteBufferList byteBufferList) {
-                        System.out.println("I got some bytes!");
-                        // note that this data has been read
-                        byteBufferList.recycle();
-                    }
-                });
+            public void run() {
+                mRecordingThread.centerFrequency = Integer.parseInt(setFreq.getText().toString());
+                layout.requestFocus();
             }
         });
+
     }
 
 }

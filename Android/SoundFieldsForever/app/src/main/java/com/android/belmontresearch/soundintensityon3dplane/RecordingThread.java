@@ -13,10 +13,10 @@ import android.util.Log;
 
 public class RecordingThread {
     private static final String LOG_TAG = RecordingThread.class.getSimpleName();
-    private static final int SAMPLE_RATE = 44100;
-    public float centerFrequency = 5000;
+    private static final int SAMPLE_RATE = 22050;
+    public int centerFrequency = 162;
     private short[] audioBuffer;
-    private short[] audioBuffer2;
+    private float[] audioBuffer2;
     private double rms;
     private double mGain;
     private double rmsdB;
@@ -69,7 +69,7 @@ public class RecordingThread {
         }
 
         audioBuffer = new short[bufferSize / 2];
-        audioBuffer2 = new short[bufferSize / 2];
+        audioBuffer2 = new float[bufferSize / 2];
 
         AudioRecord record = new AudioRecord(MediaRecorder.AudioSource.DEFAULT,
                 SAMPLE_RATE,
@@ -95,16 +95,16 @@ public class RecordingThread {
              */
             // Compute the RMS value. (Note that this does not remove DC).
             for (int i = 2; i < audioBuffer.length; i++) {
-                if(i % 3 == 0) {
-                    audioBuffer2[i] = BiQuad.bqfilter(audioBuffer[i], audioBuffer[i - 1], audioBuffer[i - 2], audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], SAMPLE_RATE, centerFrequency, 5);
-//                    audioBuffer2[i] = BiQuad.bqfilter(audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], SAMPLE_RATE, centerFrequency, 5);
-                    rms += audioBuffer2[i] * audioBuffer2[i];
-//                    rms += audioBuffer[i] * audioBuffer[i];
-                }
+                    audioBuffer2[i] = BiQuad.bqfilter(audioBuffer[i], audioBuffer[i - 1], audioBuffer[i - 2], audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], SAMPLE_RATE, centerFrequency, 30);
+                    audioBuffer2[i] = BiQuad.bqfilter2(audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], audioBuffer2[i], audioBuffer2[i - 1], audioBuffer2[i - 2], SAMPLE_RATE, centerFrequency, 30);
+//                    rms += audioBuffer2[i] * audioBuffer2[i];
+                rms += audioBuffer2[i] * audioBuffer2[i];
             }
-            rms = Math.sqrt(rms / audioBuffer2.length);
-            mGain = 1.0/32767; //0.0044;
-            rmsdB = 20.0 * Math.log10(mGain * rms);
+            rms = Math.sqrt(rms / (audioBuffer.length-2));
+            mGain = 1.0/32767;
+            float cal0 = 0.0f;
+            float calSlope = 1.0f;
+            rmsdB = calSlope * 20.0 * Math.log10(mGain * rms) + cal0;
         }
 
         record.stop();

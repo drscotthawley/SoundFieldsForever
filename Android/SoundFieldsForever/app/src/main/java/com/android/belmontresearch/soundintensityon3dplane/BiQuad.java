@@ -35,7 +35,7 @@ public class BiQuad {
         return coeffs;
     }
 
-    public static short[] bqfilter(short[] x, short[] y, float Fs, float f0, float Q) {
+    public static float[] bqfilter(float[] x, float[] y, float Fs, float f0, float Q) {
 //            #Biquad IIRfilter
 //    #x =input(buffer of audio signal)
 //    #y =output(including previous values of output)
@@ -55,13 +55,13 @@ public class BiQuad {
         y[0] = 0;
         y[1] = 0;
         for(int i=2; i<x.length; i++) {
-            y[i] = (short)((b0 / a0) * x[i] + (b1 / a0) * x[i - 1] + (b2 / a0) * x[i - 2] - (a1 / a0) * y[i - 1] - (a2 / a0) * y[i - 2]);
+            y[i] = (float)((b0 / a0) * x[i] + (b1 / a0) * x[i - 1] + (b2 / a0) * x[i - 2] - (a1 / a0) * y[i - 1] - (a2 / a0) * y[i - 2]);
         }
         return y;
 
     }
 
-    public static short bqfilter(short x, short xm1, short xm2, short y, short ym1, short ym2, float Fs, float f0, float Q) {
+    public static float bqfilter(short x, short xm1, short xm2, float y, float ym1, float ym2, float Fs, float f0, float Q) {
 //            #Biquad IIRfilter
 //    #x =input(buffer of audio signal)
 //    #y =output(including previous values of output)
@@ -79,7 +79,30 @@ public class BiQuad {
         //short[] y = new short[x.length];
 //        # initialize y with x
         y = 0;
-        y = (short)((b0 / a0) * x + (b1 / a0) * xm1 + (b2 / a0) * xm2 - (a1 / a0) * ym1 - (a2 / a0) * ym2);
+        y = (float)((b0 / a0) * x + (b1 / a0) * xm1 + (b2 / a0) * xm2 - (a1 / a0) * ym1 - (a2 / a0) * ym2);
+
+        return y;
+    }
+
+    public static float bqfilter2(float x, float xm1, float xm2, float y, float ym1, float ym2, float Fs, float f0, float Q) {
+//            #Biquad IIRfilter
+//    #x =input(buffer of audio signal)
+//    #y =output(including previous values of output)
+//    #Fs =sample rate
+//    n = currenttime step
+
+        float coeffs[] = filtercoeffs(f0, Fs, Q);
+        a0 = coeffs[0];
+        a1 = coeffs[1];
+        a2 = coeffs[2];
+        b0 = coeffs[3];
+        b1 = coeffs[4];
+        b2 = coeffs[5];
+
+        //short[] y = new short[x.length];
+//        # initialize y with x
+        y = 0;
+        y = (float)((b0 / a0) * x + (b1 / a0) * xm1 + (b2 / a0) * xm2 - (a1 / a0) * ym1 - (a2 / a0) * ym2);
 
         return y;
     }

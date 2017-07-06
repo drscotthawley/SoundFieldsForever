@@ -64,10 +64,11 @@ dependencies {
     compile "com.google.tango:sdk-base:${release_version}"
     compile "com.google.tango:support-base:${release_version}"
     compile 'org.rajawali3d:rajawali:1.0.325@aar'
-    compile files('libs/TarsosDSP-Android-latest.jar')
 
-    compile "org.java-websocket:Java-WebSocket:1.3.4"
-    compile 'com.koushikdutta.async:androidasync:2.+'
+    compile ('io.socket:socket.io-client:0.8.3') {
+        // excluding org.json which is provided by Android
+        exclude group: 'org.json', module: 'json'
+    }
 }
 
 
