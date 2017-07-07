@@ -47,7 +47,7 @@ Filter frequency:
 <div class="dropdown"
   <form>
        <select id="freqDropDown" onchange="freqChange(this)" >
-          <option value="0" selected="selected"> All freqs</option>
+          <option value="0" selected="selected"> Param EQ</option>
           <option value="1"> 62.5 Hz</option>
           <option value="2"> 125 Hz</option>
           <option value="3"> 250 Hz</option>
@@ -59,8 +59,14 @@ Filter frequency:
   </form>
 </div>
 
+
  <br>
 <svg width="500" height="500"></svg>
+<textarea rows="10" cols="40">
+Notes:
+
+</textarea>
+
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
@@ -112,8 +118,10 @@ Filter frequency:
 
 
     // values  at data points / colors being mapped = "dBvals"
-    var kx = 3.14159/(width*0.5);
-    var ky = 3.14159/(height*0.5);
+
+    // demo data:
+    var kx = 3.14159/(width);
+    var ky = 3.14159/(height);
     nZBins = 8;
     var dBvals = [ d3.range(npoints), d3.range(npoints), d3.range(npoints), d3.range(npoints),
                    d3.range(npoints), d3.range(npoints), d3.range(npoints), d3.range(npoints)];
@@ -223,6 +231,18 @@ Filter frequency:
         //basefreq = 250.0;
         //freq = option.value*1.0
         freqBin = option.value;
+        var dBIndex = document.getElementById("freqDropDown").value;
+
+        dB_plot = dBvals[dBIndex];
+        dBMax = Math.max.apply(Math, dB_plot);
+        dBMin = Math.min.apply(Math,  dB_plot);
+        console.log("dBMin =",dBMin,", dBMax =",dBMax);
+        colors = dB_plot.map(function(q) { return q - dBMin; });
+
+        colorMax = Math.max.apply(Math, colors);
+        colorMin = Math.min.apply(Math, colors);
+        intendedColorRange = 310;
+        colorScaleFactor = intendedColorRange/(colorMax - colorMin) + colorMin;
         /*
         kx = 2.0*3.14159/(width*0.5)* (freq/basefreq);
         ky = 2.0*3.14159/(height*0.5)*(freq/basefreq);
@@ -232,7 +252,7 @@ Filter frequency:
         }*/
         svg.selectAll("g.polygons")
         .selectAll("path")
-          .style('fill', function(d,i){ return d3.hsl( dBvals[freqBin][i]*310,        1, .5); })
+          .style('fill', function(d,i){ return d3.hsl( colors[i]*colorScaleFactor,        1, .5); })
             .call(redrawPolygon);
         if (false == showBounds) {
             svg.selectAll("g.polygons").style('stroke', 'none');
@@ -316,7 +336,7 @@ Filter frequency:
 
 
         var dBIndex = document.getElementById("freqDropDown").value;
-        console.log("Dropdown index = ",dBIndex);
+        //console.log("Dropdown index = ",dBIndex);
 
         //scale world coordinates to screen coordinates
         xMin = Math.min.apply(Math, x);
@@ -343,17 +363,17 @@ Filter frequency:
         dB_plot = dBvals[dBIndex];
         dBMax = Math.max.apply(Math, dB_plot);
         dBMin = Math.min.apply(Math,  dB_plot);
-        console.log("dBMin =",dBMin,", dBMax =",dBMax);
+        //console.log("dBMin =",dBMin,", dBMax =",dBMax);
         colors = dB_plot.map(function(q) { return q - dBMin; });
 
         colorMax = Math.max.apply(Math, colors);
         colorMin = Math.min.apply(Math, colors);
         intendedColorRange = 310;
         colorScaleFactor = intendedColorRange/(colorMax - colorMin) + colorMin;
-        console.log("colors[0] = ",colors[0]);
-        console.log("colorScaleFactor = ",colorScaleFactor);
+        //console.log("colors[0] = ",colors[0]);
+        //console.log("colorScaleFactor = ",colorScaleFactor);
 
-        console.log("colorMin =",colorMin,", colorMax =",colorMax);
+        //console.log("colorMin =",colorMin,", colorMax =",colorMax);
 
 
         var xextents = getMinMaxOf2DIndex(sites,0);
@@ -389,6 +409,9 @@ Filter frequency:
         }
         effect_zoom(transform);
     }
+
+    // from http://techslides.com/demos/d3/svg-to-image-1.html
+
 
 
 </script>
