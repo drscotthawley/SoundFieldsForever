@@ -58,6 +58,7 @@ Filter frequency:
       </select>
   </form>
 </div>
+<button id="clear">Erase Data</button>
 
 
  <br>
@@ -112,7 +113,7 @@ Notes:
     transform = d3.zoomIdentity;
 
     // Random data to start with
-    var npoints = 1000;
+    var npoints = 1500;
     var sites = d3.range(npoints)
         .map(function(d) { return [Math.random() * width, Math.random() * height]; });
 
@@ -120,19 +121,56 @@ Notes:
     // values  at data points / colors being mapped = "dBvals"
 
     // demo data:
-    var kx = 3.14159/(width);
-    var ky = 3.14159/(height);
     nZBins = 8;
     var dBvals = [ d3.range(npoints), d3.range(npoints), d3.range(npoints), d3.range(npoints),
                    d3.range(npoints), d3.range(npoints), d3.range(npoints), d3.range(npoints)];
-
+   /*
+   // fake room modes
+   var kx = 3.14159/(width);
+   var ky = 3.14159/(height);
     for (j = 0; j < nZBins; j++) {
       for (i = 0; i < npoints; i++) {
           dBvals[j][i] = (1.0 + Math.cos((j+1)*kx*sites[i][0]) * Math.cos((j+1)*ky*sites[i][1]))/2.0;
           dBvals[j][i] *= dBvals[j][i];
       }
     }
-    //  End random data
+    */
+    // fake two-speaker interference pattern
+    var ppf = 50;    // pixels per foot
+    var vs = 1130;    // feet per second
+    var dist = 2*ppf;    // sources 2 feet apart
+    var source1x = width/2 - dist/2;
+    var source2x = width/2 + dist/2;
+    var source1y = height;
+    var source2y = source1y;
+     for (j = 0; j < nZBins; j++) {
+       var f =  32.25*Math.pow(2, j);
+       var lambda = vs/f * ppf;
+       var k = 2*3.1415/lambda;
+       for (i = 0; i < npoints; i++) {
+           var r1 = Math.sqrt( (sites[i][0] - source1x)**2 + (sites[i][1]-source1y)**2 );
+           var r2 = Math.sqrt( (sites[i][0] - source2x)**2 + (sites[i][1]-source2y)**2 );
+           dBvals[j][i] = Math.cos(k*r1)/r1 + Math.cos(k*r2)/r2;
+
+           dBvals[j][i] *= dBvals[j][i];
+           dBvals[j][i] = 2*Math.log(dBvals[j][i])
+       }
+     }
+     var dBIndex = document.getElementById("freqDropDown").value;
+     dB_plot = dBvals[dBIndex];
+     dBMax = Math.max.apply(Math, dB_plot);
+     dBMin = Math.min.apply(Math,  dB_plot);
+     console.log("dBMin =",dBMin,", dBMax =",dBMax);
+     colors = dB_plot.map(function(q) { return q - dBMin; });
+
+     colorMax = Math.max.apply(Math, colors);
+     colorMin = Math.min.apply(Math, colors);
+     console.log("colorMin = ",colorMin,", colorMax = ",colorMax)
+     intendedColorRange = 310;
+     colorScaleFactor = intendedColorRange/(colorMax - colorMin);
+
+
+    //  End demo data
 
     var showSites = true;
     var showBounds = true;
@@ -160,7 +198,7 @@ Notes:
         .selectAll("path")
         .data(voronoi.polygons(sites))
         .enter().append("path")
-        .style('fill', function(d,i){ return d3.hsl( dBvals[0][i]*310,        1, .5); })
+        .style('fill', function(d,i){ return d3.hsl( colors[i]*colorScaleFactor + colorMin,        1, .5); })
         .call(redrawPolygon);
 
     var site = svg.append("g")
@@ -183,7 +221,8 @@ Notes:
 
 
     // Buttons
-    d3.select("#reset").on("click", resetted);
+    d3.select("#reset").on("click", reset_zoom);
+    d3.select("#clear").on("click", clear_data);
     d3.select("#sitesToggle").on("click", function (d) {
         showSites = !showSites;
         if (false==showSites) {
@@ -217,17 +256,21 @@ Notes:
         polygon.attr("transform", transform);
     }
 
-    function resetted() {
+    function reset_zoom() {
       svg.transition()
           .duration(700)
           .call(zoom.transform, d3.zoomIdentity);
       transform = d3.zoomIdentity;
     }
+    function clear_data() {
+      svg.selectAll("g.polygons").remove(); // delete old polygons
+      svg.selectAll("g.sites").remove(); // delete old sites
+    }
 
 
     // Freq Change
     function freqChange(option) {
-        console.log(option.value);
+        //console.log(option.value);
         //basefreq = 250.0;
         //freq = option.value*1.0
         freqBin = option.value;
@@ -241,7 +284,9 @@ Notes:
 
         colorMax = Math.max.apply(Math, colors);
         colorMin = Math.min.apply(Math, colors);
-        intendedColorRange = 310;
+        console.log("colorMin = ",colorMin,", colorMax = ",colorMax)
+
+
         colorScaleFactor = intendedColorRange/(colorMax - colorMin) + colorMin;
         /*
         kx = 2.0*3.14159/(width*0.5)* (freq/basefreq);
@@ -252,7 +297,7 @@ Notes:
         }*/
         svg.selectAll("g.polygons")
         .selectAll("path")
-          .style('fill', function(d,i){ return d3.hsl( colors[i]*colorScaleFactor,        1, .5); })
+          .style('fill', function(d,i){ return d3.hsl( colors[i]*colorScaleFactor + colorMin,        1, .5); })
             .call(redrawPolygon);
         if (false == showBounds) {
             svg.selectAll("g.polygons").style('stroke', 'none');
@@ -369,7 +414,7 @@ Notes:
         colorMax = Math.max.apply(Math, colors);
         colorMin = Math.min.apply(Math, colors);
         intendedColorRange = 310;
-        colorScaleFactor = intendedColorRange/(colorMax - colorMin) + colorMin;
+        colorScaleFactor = intendedColorRange/(colorMax - colorMin);
         //console.log("colors[0] = ",colors[0]);
         //console.log("colorScaleFactor = ",colorScaleFactor);
 
@@ -388,7 +433,7 @@ Notes:
         .selectAll("path")
         .data(voronoi.polygons(sites))
         .enter().append("path")
-        .style('fill', function(d,i){ return d3.hsl( colors[i]*colorScaleFactor,        1, .5); })
+        .style('fill', function(d,i){ return d3.hsl( colors[i]*colorScaleFactor + colorMin,        1, .5); })
           .call(redrawPolygon);
         if (false == showBounds) {
           svg.selectAll("g.polygons").style('stroke', 'none');
