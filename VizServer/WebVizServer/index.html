@@ -59,14 +59,12 @@ Filter freq:
 <!--<button id="sitesToggle">Toggle Sites</button>-->
 <input type="checkbox" id="boundsToggle" >Bounds
 <input type="checkbox" id="blurToggle" checked>Blur</button>
-
-
-
-<button id="clear">Erase Data</button>
-<button id="saveData">Save Data</button>
 <br>
-<form id="myform" style="inline">
-    Upload Data:<input id="myfile" name="files[]" multiple="" type="file" />
+
+<button id="saveData">Save Data</button>
+<button id="clear">Erase Data</button>
+<form id="myform" style="display:inline-block;">
+    Upload Data:<input id="myfile" name="files[]" multiple="" type="file"/>
 </form>
 
 
@@ -120,8 +118,14 @@ Notes:
 
     transform = d3.zoomIdentity;
 
+
+
+
+
+
+
     // Random data to start with
-    var npoints = 4000;
+    var npoints = 2000;
     // generate a parameterized zig-zag;
     var noise_amp = 0.0;
     var worldCoords = d3.range(npoints)
@@ -215,11 +219,11 @@ Notes:
 
     var scale_x = d3.scaleLinear()
         .domain(d3.extent(sites, function (d) { return +d[0]; }))
-        .range([0, width])
+        .range([0, width+1])
         .nice();
     var scale_y = d3.scaleLinear()
         .domain(d3.extent(sites, function (d) { return +d[1]; }))
-        .range([height, 0])
+        .range([0, height+1])
         .nice();
     var scale_color = d3.scaleLinear()
         .domain(d3.extent(dB_plot, function (d) { return +d; }))
@@ -237,7 +241,7 @@ Notes:
       //.style('fill', function(d,i){ return d3.hsl( colors[i]*colorScaleFactor + colorMin, 1, .5); })
       .style("fill", function (d,i) { return scale_color(dB_plot[i]); })
       .style('fill-opacity',(showBlur ? 0.8 : 0.99))
-      .style('stroke-opacity', (showBounds ? .99 : 0))
+      .style('stroke', (showBounds ? "#000" : "none"))
       .call(redrawPolygon);
 
 
@@ -250,8 +254,8 @@ Notes:
         .selectAll("rect")
         .data(sites)
         .enter().append("circle")
-        .attr("cx", function (d) { return scale_x(+d[0]) - filling_w / 2; })
-        .attr("cy", function (d) { return scale_y(height - (+d[1]) - filling_h / 2); })
+        .attr("cx", function (d) { return 5+scale_x(+d[0]) - filling_w/2; }) // the 5 just seems to help calibrate
+        .attr("cy", function (d) { return 5+scale_y(+d[1]) - filling_h/2; })
         .attr("r", filling_w)
         .style("fill", function (d,i) { return scale_color(dB_plot[i]); })
         .style('fill-opacity', (showBlur ? 0.5 : 0))
@@ -265,8 +269,8 @@ Notes:
     .data(sites)
     .enter().append("circle")
     .attr("r", 2.5)
-    .style('fill-opacity', (showSites ? .99 : 0))
-    .style('stroke-opacity', (showSites ? .99 : 0))
+    .style('fill', (showSites ? "#000" : 'none'))
+    .style('stroke', (showSites ? "#FFF" : 'none'))
     .call(redrawSite);
 
     function redrawPolygon(polygon) {
@@ -290,14 +294,14 @@ Notes:
         showSites = !showSites;
         svg.selectAll("g.sites")
         .selectAll("circle")
-            .style('fill-opacity', (showSites ? .99 : 0))
-            .style('stroke-opacity', (showSites ? .99 : 0))
+            .style('fill', (showSites ? "#000" : 'none'))
+            .style('stroke', (showSites ? "#FFF" : 'none'))
     });
     d3.select("#boundsToggle").on("click", function (d) {
         showBounds = !showBounds;
         svg.selectAll("g.polygons")
         .selectAll("path")
-        .style('stroke-opacity', (showBounds ? .99 : 0))
+        .style('stroke', (showBounds ? "#000" : 'none'))
     });
     d3.select("#blurToggle").on("click", function (d) {
       showBlur = !showBlur;
@@ -405,7 +409,6 @@ Notes:
           .style("fill", function (d,i) { return scale_color(dB_plot[i]); })
             .call(redrawPolygon);
 
-
         svg.selectAll("g.blurries")
         .selectAll("circle")
         .style("fill", function (d,i) { return scale_color(dB_plot[i]); })
@@ -489,6 +492,7 @@ Notes:
         }
 
         var dBIndex = document.getElementById("freqDropDown").value;
+        dB_plot = dBvals[dBIndex];
 
         //scale world coordinates to screen coordinates
         xMin = Math.min.apply(Math, x);
@@ -512,8 +516,8 @@ Notes:
 
 
         // scale dB -> color
-        dB_plot = dBvals[dBIndex];
-        dBMax = Math.max.apply(Math, dB_plot);
+
+        /*dBMax = Math.max.apply(Math, dB_plot);
         dBMin = Math.min.apply(Math,  dB_plot);
         //console.log("dBMin =",dBMin,", dBMax =",dBMax);
         colors = dB_plot.map(function(q) { return q - dBMin; });
@@ -521,7 +525,7 @@ Notes:
         colorMax = Math.max.apply(Math, colors);
         colorMin = Math.min.apply(Math, colors);
         intendedColorRange = 310;
-        colorScaleFactor = intendedColorRange/(colorMax - colorMin);
+        colorScaleFactor = intendedColorRange/(colorMax - colorMin);*/
         //console.log("colors[0] = ",colors[0]);
         //console.log("colorScaleFactor = ",colorScaleFactor);
 
@@ -537,14 +541,16 @@ Notes:
         svg.selectAll("g.polygons").remove(); // delete old polygons
         polygon = svg.append("g")             // add new polygons
           .attr("class", "polygons")
-        .selectAll("path")
-        .data(voronoi.polygons(sites))
-        .enter().append("path")
-        .style('fill', function(d,i){ return d3.hsl( colors[i]*colorScaleFactor + colorMin,        1, .5); })
+          .selectAll("path")
+          .data(voronoi.polygons(sites))
+          .enter().append("path")
+          .style('fill', function(d,i){ return d3.hsl( scale_color(dB_plot[i]),        1, .5); })
           .call(redrawPolygon);
-        if (false === showBounds) {
+        /*if (false === showBounds) {
           svg.selectAll("g.polygons").style('stroke', 'none');
-        }
+        }*/
+
+        svg.selectAll("g.blurries").remove();
 
         svg.selectAll("g.sites").remove();  // delete old sites
         site = svg.append("g")              // add new sites
@@ -565,6 +571,9 @@ Notes:
     // from http://techslides.com/demos/d3/svg-to-image-1.html
 
 
+//svg.selectAll("g").attr("transform", "rotate(-15)");
+// svg.selectAll("g.sites").attr("transform", "rotate(-15)");
+ //svg.selectAll("g.blurries").attr("transform", "rotate(-15)");
 
 </script>
 
