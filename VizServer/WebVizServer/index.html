@@ -33,9 +33,8 @@
 <h2>Visualizing Real-Time Point-Cloud Sound Intensity Data via Voronoi Tesselation</h2>
 This is for the Google Tango app project, which uses a client-server model whereby the Tango ("client")
 sends its measurements via WebSockets to this vizualization server.<br>
-Here's a prototype of our sound viz server.<br>
-You can pan and zoom. Yay!<br>
-This works best with the Chrome browser; Firefox is slow.<br>
+You can pan and zoom.
+Works best with Chrome browser; Firefox is slow.<br>
 <br>
 
 
@@ -43,7 +42,7 @@ This works best with the Chrome browser; Firefox is slow.<br>
 <button id="sitesToggle">Toggle Sites</button>
 <button id="boundsToggle">Toggle Boundaries</button>
 
-Filter frequency:
+Filter freq:
 <div class="dropdown"
   <form>
        <select id="freqDropDown" onchange="freqChange(this)" >
@@ -58,16 +57,23 @@ Filter frequency:
       </select>
   </form>
 </div>
+
+
+
 <button id="clear">Erase Data</button>
+<button id="saveData">Save Data</button>
+<br>
+<form id="myform" style="inline">
+    <input id="myfile" name="files[]" multiple="" type="file" />
+</form>
 
 
- <br>
+<br>
+
 <svg width="500" height="500"></svg>
-<textarea rows="10" cols="40">
+<textarea rows="15" cols="40" style="vertical-align:top">
 Notes:
-
 </textarea>
-
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
@@ -113,9 +119,13 @@ Notes:
     transform = d3.zoomIdentity;
 
     // Random data to start with
-    var npoints = 1500;
+    var npoints = 4000;
+
+    var worldCoords = d3.range(npoints)
+        .map(function(d) { return [Math.random(), Math.random(), 0]; });
+
     var sites = d3.range(npoints)
-        .map(function(d) { return [Math.random() * width, Math.random() * height]; });
+        .map(function(d) { return [ worldCoords[d][0]*width, worldCoords[d][1]* height]; });
 
 
     // values  at data points / colors being mapped = "dBvals"
@@ -156,8 +166,16 @@ Notes:
            dBvals[j][i] = 2*Math.log(dBvals[j][i])
        }
      }
+
+
      var dBIndex = document.getElementById("freqDropDown").value;
      dB_plot = dBvals[dBIndex];
+     /*dBMax = dBvals.reduce(function(max, arr) { // Global max
+          return max >= arr[0] ? max : arr[0];
+     }, -Infinity);
+     dBMin = dBvals.reduce(function(min, arr) {
+          return min <= arr[0] ? min : arr[0];
+     }, Infinity);*/
      dBMax = Math.max.apply(Math, dB_plot);
      dBMin = Math.min.apply(Math,  dB_plot);
      console.log("dBMin =",dBMin,", dBMax =",dBMax);
@@ -223,6 +241,7 @@ Notes:
     // Buttons
     d3.select("#reset").on("click", reset_zoom);
     d3.select("#clear").on("click", clear_data);
+    d3.select("#saveData").on("click", save_data);
     d3.select("#sitesToggle").on("click", function (d) {
         showSites = !showSites;
         if (false==showSites) {
@@ -265,7 +284,62 @@ Notes:
     function clear_data() {
       svg.selectAll("g.polygons").remove(); // delete old polygons
       svg.selectAll("g.sites").remove(); // delete old sites
+      npoints = 0;
     }
+
+
+    // stackoverflow
+    function download_text(filename, text) {
+      var element = document.createElement('a');
+      element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+      element.setAttribute('download', filename);
+
+      element.style.display = 'none';
+      document.body.appendChild(element);
+
+      element.click();
+
+      document.body.removeChild(element);
+      console.log("download_text:")
+    }
+
+    function save_data() {
+      var text = "x,y,z,dB,dB0,dB1,dB2,dB3,dB4,dB5,dB6\n";
+      for (p=0; p < npoints; p++) {
+        text += String(worldCoords[p][0])+","+String(worldCoords[p][1])+","+String(worldCoords[p][2]);
+        for (j=0; j < nZBins; j++) {
+           text += ","+String(dBvals[j][p])
+        }
+        text += "\n";
+      }
+      download_text("TangoData.csv",text)
+      console.log("save_data: 4")
+
+    }
+
+
+    // uploading a file
+    document.forms['myform'].elements['myfile'].onchange = function(evt) {
+    if(!window.FileReader) return; // Browser is not compatible
+    var reader = new FileReader();
+
+    reader.onload = function(evt) {
+        if(evt.target.readyState != 2) return;
+        if(evt.target.error) {
+            alert('Error while reading file');
+            return;
+        }
+
+        filecontent = evt.target.result;
+        var text = filecontent;
+        console.log("text = ",text)
+        //document.forms['myform'].elements['text'].value = evt.target.result;
+    };
+
+    reader.readAsText(evt.target.files[0]);
+};
+
+
 
 
     // Freq Change
@@ -279,6 +353,13 @@ Notes:
         dB_plot = dBvals[dBIndex];
         dBMax = Math.max.apply(Math, dB_plot);
         dBMin = Math.min.apply(Math,  dB_plot);
+        /*dBMax = dBvals.reduce(function(max, arr) {
+             return max >= arr[0] ? max : arr[0];
+        }, -Infinity);
+        dBMin = dBvals.reduce(function(min, arr) {
+             return min <= arr[0] ? min : arr[0];
+        }, Infinity);*/
+
         console.log("dBMin =",dBMin,", dBMax =",dBMax);
         colors = dB_plot.map(function(q) { return q - dBMin; });
 
@@ -379,6 +460,12 @@ Notes:
         dBvals[6] = dB5.map(Number);
         dBvals[7] = dB6.map(Number);
 
+        for (p=0; p < npoints; p++) {
+          worldCoords[p][0] = x[p];
+          worldCoords[p][1] = y[p];
+          worldCoords[p][2] = z[p];
+
+        }
 
         var dBIndex = document.getElementById("freqDropDown").value;
         //console.log("Dropdown index = ",dBIndex);
