@@ -404,9 +404,7 @@ Notes:
           //.style('fill', function(d,i){ return d3.hsl( colors[i]*colorScaleFactor + colorMin,        1, .5); })
           .style("fill", function (d,i) { return scale_color(dB_plot[i]); })
             .call(redrawPolygon);
-        if (false === showBounds) {
-            svg.selectAll("g.polygons").style('stroke', 'none');
-        }
+
 
         svg.selectAll("g.blurries")
         .selectAll("circle")
