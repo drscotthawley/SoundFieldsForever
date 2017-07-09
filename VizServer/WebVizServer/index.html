@@ -64,7 +64,7 @@ Filter freq:
 <button id="saveData">Save Data</button>
 <br>
 <form id="myform" style="inline">
-    <input id="myfile" name="files[]" multiple="" type="file" />
+    Upload Data:<input id="myfile" name="files[]" multiple="" type="file" />
 </form>
 
 
@@ -332,7 +332,8 @@ Notes:
 
         filecontent = evt.target.result;
         var text = filecontent;
-        console.log("text = ",text)
+        //console.log("text = ",text)
+        applyNewMsg(text);
         //document.forms['myform'].elements['text'].value = evt.target.result;
     };
 
