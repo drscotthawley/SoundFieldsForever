@@ -66,11 +66,12 @@ Filter freq:
 <form id="myform" style="display:inline-block;">
     Upload Data:<input id="myfile" name="files[]" multiple="" type="file"/>
 </form>
+<button id="saveImage">Save Image</button>
 
 
 <br>
 
-<svg width="500" height="500"></svg>
+<svg width="500" height="500" id="figureSvg" xmlns="http://www.w3.org/2000/svg"></svg>
 <textarea rows="15" cols="40" style="vertical-align:top">
 Notes:
 </textarea>
@@ -246,7 +247,7 @@ Notes:
 
 
       //fill rect based on data
-    var fill_fac = 50;
+    var fill_fac = 40;
     var filling_w = width / fill_fac;// 19 points on x axis
     var filling_h = height / fill_fac;
     var blurries = svg.append("g")
@@ -290,6 +291,7 @@ Notes:
     d3.select("#reset").on("click", reset_zoom);
     d3.select("#clear").on("click", clear_data);
     d3.select("#saveData").on("click", save_data);
+    d3.select("#saveImage").on("click", save_image)
     d3.select("#sitesToggle").on("click", function (d) {
         showSites = !showSites;
         svg.selectAll("g.sites")
@@ -366,6 +368,18 @@ Notes:
         text += "\n";
       }
       download_text("TangoData.csv",text)
+    }
+
+    function save_image() { //https://stackoverflow.com/questions/23218174/how-do-i-save-export-an-svg-file-after-creating-an-svg-with-d3-js-ie-safari-an
+      var svgData = $("#figureSvg")[0].outerHTML;
+      var svgBlob = new Blob([svgData], {type:"image/svg+xml;charset=utf-8"});
+      var svgUrl = URL.createObjectURL(svgBlob);
+      var downloadLink = document.createElement("a");
+      downloadLink.href = svgUrl;
+      downloadLink.download = "TangoImage.svg";
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
     }
 
 
