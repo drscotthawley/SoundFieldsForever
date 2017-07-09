@@ -72,7 +72,7 @@ Filter freq:
 <br>
 
 <svg width="500" height="500" id="figureSvg" xmlns="http://www.w3.org/2000/svg"></svg>
-<textarea rows="15" cols="40" style="vertical-align:top">
+<textarea rows="15" cols="40" style="vertical-align:top" id="notesField">
 Notes:
 </textarea>
 
@@ -371,6 +371,8 @@ Notes:
     }
 
     function save_image() { //https://stackoverflow.com/questions/23218174/how-do-i-save-export-an-svg-file-after-creating-an-svg-with-d3-js-ie-safari-an
+      var note = "\n"+$("#notesField")[0].value+"\n";  // \n's make it easier to read IMHO
+      svg.attr("description",note);   // not sure if this is legal SVG, but works so far
       var svgData = $("#figureSvg")[0].outerHTML;
       var svgBlob = new Blob([svgData], {type:"image/svg+xml;charset=utf-8"});
       var svgUrl = URL.createObjectURL(svgBlob);
