@@ -74,11 +74,15 @@ Filter freq:
   <tr>
     <td>
       <svg width="500" height="500" id="figureSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <br><i>For more comprehensive (albeit not real-time) visualization options<br>(including full 3D), click "Save Data" and then use
+        <a href="https://www.paraview.org/">ParaView</a> to read<br>the CSV file.
+        <a target="blank" href="ParaViewInstrunctions.html">Instructions to use ParaView for unstructured data</a>
+
     </td>
     <td style="vertical-align:top">
       <textarea rows="15" cols="40" style="vertical-align:top" id="notesField">Notes:
 </textarea><br>
-      When saving images, Notes get included in SVG file as metadata.
+      <i>When saving images, Notes get included<br>in SVG file as metadata.</i>
     </td>
   </tr>
 </table>
@@ -206,7 +210,6 @@ Filter freq:
 
     var xextents = getMinMaxOf2DIndex(sites,0);
     var yextents = getMinMaxOf2DIndex(sites,1);
-    console.log("xextents.min = ",xextents.min)
     var voronoi = d3.voronoi()
         .extent([[xextents.min-1, yextents.min-1], [xextents.max + 1, yextents.max + 1]]);
 

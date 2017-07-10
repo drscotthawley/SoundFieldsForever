@@ -1,0 +1,33 @@
+<html>
+<head>
+<meta charset="utf-8">
+<title>Instructions for Using ParaView on Unstructured Data</title>
+</head>
+<body>
+<h2>Instructions for Using ParaView on Unstructured Data</h2>
+
+
+First, <a href="https://www.paraview.org/download/">Download</a> and run ParaView.<br>
+<br>
+Then, import your data into a way that ParaView can use:
+<ol>
+   <li>Select File &gt; Open &gt; (whatever your CSV file is), “Open”
+   <li>Click "Apply" on the far-left of the screen (middle height). This gives a spreadsheet view.
+   <li>Click on the “proc_data10.csv” name showing in the upper left.
+   <li>Select Filters (at the very top menu bar) &gt; Alphabetical &gt; Table to Points
+   <li>On the left, change “X Column”, “Y Column”, “Z Column” to “x”, “y,” “z”.
+   <li>In the upper left, click the “eye icon” next to “TableToPoints1”.  See the path of the Tango!
+</ol>
+Now you've got options...<br>
+<br>
+To make it look like our WebViz, you can do the following:
+<ol>
+   <li>Select Filters &gt; Alphabetical &gt; Delaunay2D, and click the eye next to the new object
+   <li>Now in the bottom-left menu, scroll down to “Coloring”, and change it from “Solid Color” to “dB”
+   <li>You can also recolor the path of the Tango from white to black by clicking on TableToPoints1 object, then above Coloring select “Point Gaussian”, and scrolling down, you can change the Gaussian Radius slider to something small.
+</ol>
+To make other visualizations -- volume rendering, isosurfaces, etc. -- I don't know but once you figure it out let me know! ;-)
+<hr>
+<i>Scott Hawley, July 2017</i>
+</body>
+</html>
