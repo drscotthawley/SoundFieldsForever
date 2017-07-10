@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>SFF WebViz</title>
 <meta property='og:title' content="Sounds Fields Forever WebViz Server">
-<meta property="og:description" content="This is the server that takes data from the Tango client and plots it" />
+<meta property="og:description" content="This is the server that takes data from the Tango client and plots it." />
 <meta property="og:image" content="http://hedges.belmont.edu/~shawley/WebVizServer/sffwebviz.png">
 <meta property="og:url" content="http://hedges.belmont.edu/~shawley/WebVizServer">
 <style>
@@ -352,9 +352,13 @@ Filter freq:
 
     }
     function effect_zoom(transform) {
-        site.attr("transform", transform);
+        if (showSites) {
+          site.attr("transform", transform);
+        }
         polygon.attr("transform", transform);
-        blurries.attr("transform", transform);
+        if (showBlur) {
+          blurries.attr("transform", transform);
+        }
     }
 
     function reset_zoom() {
