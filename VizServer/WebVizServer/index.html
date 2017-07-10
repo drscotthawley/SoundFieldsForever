@@ -25,6 +25,9 @@
     display: inline;
 }
 
+.button {
+}
+
 </style>
 </head>
 <body>
@@ -39,10 +42,10 @@ You can pan and zoom. Works best with Chrome browser; Firefox is slow.<br>
 <br>
 
 
-<button id="reset">Reset Zoom</button>
+<button class="button" id="reset">Reset Zoom</button>
 
 Filter freq:
-<div class="dropdown"
+<div class="dropdown" style="display:inline-block;"
   <form>
        <select id="freqDropDown" onchange="freqChange(this)" >
           <option value="0" selected="selected"> Param EQ</option>
@@ -61,10 +64,9 @@ Filter freq:
 <input type="checkbox" id="boundsToggle" >Bounds
 <input type="checkbox" id="blurToggle" checked>Smooth</button>
 <br>
-
-<button id="saveData">Save Data</button>
-<button id="clear">Erase Data</button>
-<button id="saveImage">Save Image</button>
+<button class="button" id="saveData">Save Data</button>
+<button class="button" id="clear">Erase Data</button>
+<button class="button" id="saveImage">Save Image</button>
 <form id="myform" style="display:inline-block;">
     Upload Data:<input id="myfile" name="files[]" multiple="" type="file"/>
 </form>
@@ -124,7 +126,7 @@ Filter freq:
 
     var zoom = d3.zoom()
         .scaleExtent([.5, 40])
-        .translateExtent([[-100, -100], [width + 90, height + 100]])
+        .translateExtent([[-100, -100], [width + 100, height + 100]])
         .on("zoom", zoomed);
 
 
@@ -349,9 +351,29 @@ Filter freq:
     // Zooming
     svg.call(zoom);
 
+    // handle the Shift key during mouse movements (for rotation)
+    shiftDown = false;
+    window.onmousemove = function (e) {
+      if (!e) e = window.event;
+      shiftDown = false;
+      if (e.shiftKey) {shiftDown = true}
+    }
+
+    rotateAngle = 0;
     function zoomed() {
         transform = d3.event.transform;
-        effect_zoom(transform);
+        //console.log("transform = ",d3.transform(transform))
+        if (shiftDown) {
+            rotateAngle +=  d3.event.transform.y/20;
+            //fullTransform = d3.transform;
+            //console.log("fullTransform = ",fullTransform);
+            new_transform ="translate(" + transform.x + ", " + transform.y + ")rotate("+rotateAngle+")";
+            console.log("shift key is down. new_transform = ",new_transform)
+
+            effect_zoom(new_transform)
+        } else {
+            effect_zoom(transform);
+        }
 
     }
     function effect_zoom(transform) {
