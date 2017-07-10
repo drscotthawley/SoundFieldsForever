@@ -119,12 +119,6 @@ Notes:
 
     transform = d3.zoomIdentity;
 
-
-
-
-
-
-
     // Random data to start with
     var npoints = 2000;
     // generate a parameterized zig-zag;
@@ -175,8 +169,6 @@ Notes:
      }
      //  End demo data
 
-     var dBIndex = document.getElementById("freqDropDown").value;
-     dB_plot = dBvals[dBIndex];
 
 
 
@@ -201,14 +193,15 @@ Notes:
             max: Math.max.apply(null, arr.map(function (e) { return e[idx]}))
         }
     }
+    var dBIndex = document.getElementById("freqDropDown").value;
+    var dB_plot = dBvals[dBIndex];
+
 
     var xextents = getMinMaxOf2DIndex(sites,0);
     var yextents = getMinMaxOf2DIndex(sites,1);
     console.log("xextents.min = ",xextents.min)
     var voronoi = d3.voronoi()
         .extent([[xextents.min-1, yextents.min-1], [xextents.max + 1, yextents.max + 1]]);
-
-
 
 
     // filters and interpolation for smoothing/blur
@@ -234,45 +227,58 @@ Notes:
    // end filters for smoothing/blur
 
   // voronoi polygons
-  var polygon = svg.append("g")
-      .attr("class", "polygons")
-      .selectAll("path")
-      .data(voronoi.polygons(sites))
-      .enter().append("path")
-      //.style('fill', function(d,i){ return d3.hsl( colors[i]*colorScaleFactor + colorMin, 1, .5); })
-      .style("fill", function (d,i) { return scale_color(dB_plot[i]); })
-      .style('fill-opacity',(showBlur ? 0.8 : 0.99))
-      .style('stroke', (showBounds ? "#000" : "none"))
-      .call(redrawPolygon);
+    function add_polygons() {
+      polygon = svg.append("g")  // global
+          .attr("class", "polygons")
+          .selectAll("path")
+          .data(voronoi.polygons(sites))
+          .enter().append("path")
+          .style("fill", function (d,i) { return scale_color(dB_plot[i]); })
+          .style('fill-opacity',(showBlur ? 0.8 : 0.99))
+          .style('stroke', (showBounds ? "#000" : "none"))
+          .call(redrawPolygon);
+      polygon.attr("transform", transform);
+    }
+    add_polygons();
 
 
-      //fill rect based on data
-    var fill_fac = 40;
-    var filling_w = width / fill_fac;// 19 points on x axis
-    var filling_h = height / fill_fac;
-    var blurries = svg.append("g")
-        .attr("class", "blurries")
-        .selectAll("rect")
-        .data(sites)
-        .enter().append("circle")
-        .attr("cx", function (d) { return 5+scale_x(+d[0]) - filling_w/2; }) // the 5 just seems to help calibrate
-        .attr("cy", function (d) { return 5+scale_y(+d[1]) - filling_h/2; })
-        .attr("r", filling_w)
-        .style("fill", function (d,i) { return scale_color(dB_plot[i]); })
-        .style('fill-opacity', (showBlur ? 0.5 : 0))
-        .attr("filter", "url(#blur)");
+    function add_blurries() {
+          //fill rect based on data
+        var fill_fac = 40;
+        var filling_w = width / fill_fac;// 19 points on x axis
+        var filling_h = height / fill_fac;
+
+        blurries = svg.append("g")
+            .attr("class", "blurries")
+            .selectAll("rect")
+            .data(sites)
+            .enter().append("circle")
+            .attr("cx", function (d) { return 5+scale_x(+d[0]) - filling_w/2; }) // the 5 just seems to help calibrate
+            .attr("cy", function (d) { return 5+scale_y(+d[1]) - filling_h/2; })
+            .attr("r", filling_w)
+            .style("fill", function (d,i) { return scale_color(dB_plot[i]); })
+            .style('fill-opacity', (showBlur ? 0.5 : 0))
+            .attr("filter", "url(#blur)");
+        blurries.attr("transform", transform);
+    }
+    add_blurries()
+
    //------ end smoothing
 
     // show locations of data points
-    var site = svg.append("g")
-    .attr("class", "sites")
-    .selectAll("circle")
-    .data(sites)
-    .enter().append("circle")
-    .attr("r", 2.5)
-    .style('fill', (showSites ? "#000" : 'none'))
-    .style('stroke', (showSites ? "#FFF" : 'none'))
-    .call(redrawSite);
+    function add_sites() {
+        site = svg.append("g")
+            .attr("class", "sites")
+            .selectAll("circle")
+            .data(sites)
+            .enter().append("circle")
+            .attr("r", 2.5)
+            .style('fill', (showSites ? "#000" : 'none'))
+            .style('stroke', (showSites ? "#FFF" : 'none'))
+            .call(redrawSite);
+        site.attr("transform", transform);
+    }
+    add_sites()
 
     function redrawPolygon(polygon) {
       polygon
@@ -294,10 +300,11 @@ Notes:
     d3.select("#saveImage").on("click", save_image)
     d3.select("#sitesToggle").on("click", function (d) {
         showSites = !showSites;
-        svg.selectAll("g.sites")
-        .selectAll("circle")
-            .style('fill', (showSites ? "#000" : 'none'))
-            .style('stroke', (showSites ? "#FFF" : 'none'))
+        if (showSites) {
+          add_sites();
+        } else {
+          svg.selectAll("g.sites").remove();
+        }
     });
     d3.select("#boundsToggle").on("click", function (d) {
         showBounds = !showBounds;
@@ -305,16 +312,18 @@ Notes:
         .selectAll("path")
         .style('stroke', (showBounds ? "#000" : 'none'))
     });
+
     d3.select("#blurToggle").on("click", function (d) {
       showBlur = !showBlur;
-      svg.selectAll("g.blurries")
-          .selectAll("circle")
-          .style('fill-opacity', (showBlur ? 0.5 : 0))
-      svg.selectAll("g.polygons")
-              .selectAll("path")
-              .style('fill-opacity', (showBlur ? 0.8 : 0.99))
+      if (showBlur) {             // removing blurries speeds up code & shrinks file size
+        add_blurries();
+      } else {
+        svg.selectAll("g.blurries").remove();
+      }
+      svg.selectAll("g.polygons")  // adjust polygon opacity if blur is/isn't present
+        .selectAll("path")
+        .style('fill-opacity', (showBlur ? 0.8 : 0.99))
     });
-
 
     // Zooming
     svg.call(zoom);
@@ -417,7 +426,6 @@ Notes:
         //freq = option.value*1.0
         freqBin = option.value;
         var dBIndex = document.getElementById("freqDropDown").value;
-
         dB_plot = dBvals[dBIndex];
 
         svg.selectAll("g.polygons")
@@ -436,15 +444,7 @@ Notes:
 
     // When new socket messages come in
     function parseMsg(msg) {
-
-        /* var msg = `x,y,z,dB
-0.029991373,-0.039875697,-0.115854755,-41
-0.03036066,-0.039075352,-0.11549742,-41
-0.03096545,-0.03815586,-0.11500641,-41
-0.031788256,-0.037278954,-0.11437142,-41
-0.03286398,-0.036341358,-0.113565676,-41`;*/
         // https://stackoverflow.com/questions/41154231/d3-how-do-i-parse-a-csv-string-into-an-object-where-keys-are-column-names-and-v
-        //console.log("parseMsg: msg = ",msg);
         var data = d3.csvParse(msg);
         var headers = d3.keys(data[0]);
         console.log("headers = ",headers)
@@ -458,59 +458,34 @@ Notes:
                 myObject[key].push(d[key]);
             }
         });
-        //console.log("myObject = ",myObject)
         return myObject;
     }
 
-
-
     function applyNewMsg(msg) {
-        //console.log("Message received: ",msg);
         var parsed = parseMsg(msg);
-        var x = parsed.x;
-
-        var y = parsed.y;
-        var z = parsed.z;
-        var dB = parsed.dB;    // Fullband-averaged dB value
-        var dB0 = parsed.dB0;  // dB in lowest freq band (63Hz)
-        var dB1 = parsed.dB1;  // dB in next freq band (125Hz)
-        var dB2 = parsed.dB2;  // dB in next freq band (250Hz)
-        var dB3 = parsed.dB3;  // dB in next freq band (500Hz)
-        var dB4 = parsed.dB4;  // dB in next freq band (1kHz)
-        var dB5 = parsed.dB5;  // dB in next freq band (2kHz)
-        var dB6 = parsed.dB6;  // dB in next freq band (4kHz)
-
-        updateData(x,y,z,dB,dB0,dB1,dB2,dB3,dB4,dB5,dB6);
+        x = parsed.x.map(Number);
+        y = parsed.y.map(Number);
+        z = parsed.z.map(Number);
+        dBvals[0] = parsed.dB.map(Number);    // Fullband-averaged dB value
+        dBvals[1] = parsed.dB0.map(Number);  // dB in lowest freq band (63Hz)
+        dBvals[2] = parsed.dB1.map(Number);  // dB in next freq band (125Hz)
+        dBvals[3] = parsed.dB2.map(Number);  // dB in next freq band (250Hz)
+        dBvals[4] = parsed.dB3.map(Number);  // dB in next freq band (500Hz)
+        dBvals[5] = parsed.dB4.map(Number);  // dB in next freq band (1kHz)
+        dBvals[6] = parsed.dB5.map(Number);  // dB in next freq band (2kHz)
+        dBvals[7] = parsed.dB6.map(Number);  // dB in next freq band (4kHz)
+        updateData();
     }
 
 
-
-
-    function updateData(x,y,z,dB,dB0,dB1,dB2,dB3,dB4,dB5,dB6) {
-        // note: z never gets used. we use dB to do the coloring.
-
+    function updateData() {
         npoints = x.length;
-        x = x.map(Number);
-        y = y.map(Number);
-        dBvals[0] = dB.map(Number);
-        dBvals[1] = dB0.map(Number);
-        dBvals[2] = dB1.map(Number);
-        dBvals[3] = dB2.map(Number);
-        dBvals[4] = dB3.map(Number);
-        dBvals[5] = dB4.map(Number);
-        dBvals[6] = dB5.map(Number);
-        dBvals[7] = dB6.map(Number);
-
         worldCoords = d3.range(npoints)
         for (p=0; p < npoints; p++) {
           worldCoords[p][0] = x[p];
           worldCoords[p][1] = y[p];
           worldCoords[p][2] = z[p];
-
         }
-
-        var dBIndex = document.getElementById("freqDropDown").value;
-        dB_plot = dBvals[dBIndex];
 
         //scale world coordinates to screen coordinates
         xMin = Math.min.apply(Math, x);
@@ -531,59 +506,21 @@ Notes:
          .map(function(d,i) { return [(xScreen[i]), (yScreen[i])]; });
 
 
-
-
-        // scale dB -> color
-
-        /*dBMax = Math.max.apply(Math, dB_plot);
-        dBMin = Math.min.apply(Math,  dB_plot);
-        //console.log("dBMin =",dBMin,", dBMax =",dBMax);
-        colors = dB_plot.map(function(q) { return q - dBMin; });
-
-        colorMax = Math.max.apply(Math, colors);
-        colorMin = Math.min.apply(Math, colors);
-        intendedColorRange = 310;
-        colorScaleFactor = intendedColorRange/(colorMax - colorMin);*/
-        //console.log("colors[0] = ",colors[0]);
-        //console.log("colorScaleFactor = ",colorScaleFactor);
-
-        //console.log("colorMin =",colorMin,", colorMax =",colorMax);
-
-
         var xextents = getMinMaxOf2DIndex(sites,0);
         var yextents = getMinMaxOf2DIndex(sites,1);
         console.log("xextents.min = ",xextents.min)
         var voronoi = d3.voronoi()
             .extent([[xextents.min-1, yextents.min-1], [xextents.max + 1, yextents.max + 1]]);
 
+        var dBIndex = document.getElementById("freqDropDown").value;
+        dB_plot = dBvals[dBIndex];
+
         svg.selectAll("g.polygons").remove(); // delete old polygons
-        polygon = svg.append("g")             // add new polygons
-          .attr("class", "polygons")
-          .selectAll("path")
-          .data(voronoi.polygons(sites))
-          .enter().append("path")
-          .style('fill', function(d,i){ return d3.hsl( scale_color(dB_plot[i]),        1, .5); })
-          .call(redrawPolygon);
-        /*if (false === showBounds) {
-          svg.selectAll("g.polygons").style('stroke', 'none');
-        }*/
-
-        svg.selectAll("g.blurries").remove();
-
+        svg.selectAll("g.blurries").remove(); // delete all blurry circles
         svg.selectAll("g.sites").remove();  // delete old sites
-        site = svg.append("g")              // add new sites
-        .attr("class", "sites")
-        .selectAll("circle")
-        .data(sites)
-        .enter().append("circle")
-        .attr("r", 2.5)
-        .call(redrawSite);
-
-        if (false===showSites) {
-          svg.selectAll("g.sites").style('fill','none');
-          svg.selectAll("g.sites").style('stroke','none');
-        }
-        effect_zoom(transform);
+        add_polygons();
+        add_blurries();
+        add_sites();
     }
 
     // from http://techslides.com/demos/d3/svg-to-image-1.html
