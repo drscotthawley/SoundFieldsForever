@@ -493,15 +493,14 @@ Notes:
         yMin = Math.min.apply(Math, y);
         yMax = Math.max.apply(Math, y);
 
-        xScale = width / (xMax-xMin);
-        yScale = height / (yMax-yMin);
-        uniScale = xScale;   // use the same (smaller) scale in x & y
+        var xScale = width / (xMax-xMin);
+        var yScale = height / (yMax-yMin);
+        var uniScale = xScale;   // use the same (smaller) scale in x & y
         if (yScale < xScale) {
           uniScale = yScale;
         }
-        xScreen = x.map(function(q) { return (q - xMin) * uniScale; });
-        yScreen = y.map(function(q) { return (q - yMin) * uniScale; });
-
+        var xScreen = x.map(function(q) { return (q - xMin) * uniScale; });
+        var yScreen = y.map(function(q) { return (q - yMin) * uniScale; });
         sites = d3.range(npoints)
          .map(function(d,i) { return [(xScreen[i]), (yScreen[i])]; });
 
@@ -509,7 +508,7 @@ Notes:
         var xextents = getMinMaxOf2DIndex(sites,0);
         var yextents = getMinMaxOf2DIndex(sites,1);
         console.log("xextents.min = ",xextents.min)
-        var voronoi = d3.voronoi()
+        voronoi = d3.voronoi()
             .extent([[xextents.min-1, yextents.min-1], [xextents.max + 1, yextents.max + 1]]);
 
         var dBIndex = document.getElementById("freqDropDown").value;
