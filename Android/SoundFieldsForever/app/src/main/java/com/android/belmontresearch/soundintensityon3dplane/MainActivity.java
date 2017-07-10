@@ -39,18 +39,23 @@ public class MainActivity extends AppCompatActivity {
 
     private AtomicBoolean mIsTangoPoseReady = new AtomicBoolean(false);
 
-    private PointTimeData nodeListStart = new PointTimeData(null, 0);
+    private double[] dummArray = {0, 0, 0, 0, 0, 0};
+    private PointTimeData nodeListStart = new PointTimeData(null, 0, dummArray);
     private PointTimeData currentNode = nodeListStart;
 
     private boolean isCapturingData = false;
 
+    // Visual elements
     private TextView xValue;
     private TextView yValue;
     private EditText setFreq;
     private Button vButton;
     private ConstraintLayout layout;
 
+    // RecordingThread is the object used to manage audio
     private RecordingThread mRecordingThread;
+
+    private String content = "x,y,z,dB,dB0,dB1,dB2,dB3,dB4,dB5,dB6";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -189,18 +194,30 @@ public class MainActivity extends AppCompatActivity {
                     TangoPoseData timePose = mTango.getPoseAtTime(pose.timestamp, framePair);
 
                     // Gets rms value for microphone input
-                    double rmsDb = mRecordingThread.getRmsdB();
+                    final double rmsDb = mRecordingThread.getRmsdB();
+                    final double rmsDbX = mRecordingThread.getRmsdBX();
 
-//                  Math.round(pose.timestamp * 10)%2==0 reduces the amount of UI manipulation
+//                   reduces the amount of UI manipulation
 //
-                    if(isCapturingData && Math.round(pose.timestamp * 10)%2==0) {
-                        if (rmsDb > -9000 && rmsDb != 0) {
+                    if(isCapturingData) {
+                        if (rmsDb > -9000 && rmsDb != 0 ) {
                             mIsTangoPoseReady.compareAndSet(false, true);
                             final float[] xyz = timePose.getTranslationAsFloats();
 
-                            final PointTimeData newNode = new PointTimeData(xyz, rmsDb);
-                            currentNode.setNextNode(newNode);
-                            currentNode = currentNode.getNextNode();
+//                            Code enables gridded mapping
+//                            if(Math.round(xyz[0] * 100) % 2 == 0 && Math.round(xyz[1] * 100) % 2 == 0) {
+                                xyz[0] = Math.round(xyz[0] * 100);
+                                xyz[1] = Math.round(xyz[1] * 100);
+                                final PointTimeData newNode = new PointTimeData(xyz, rmsDbX, mRecordingThread.getRmsdBFiltered());
+                                if (currentNode == nodeListStart) {
+                                    currentNode = newNode;
+                                } else {
+                                    currentNode.setNextNode(newNode);
+                                    currentNode = currentNode.getNextNode();
+                                }
+
+                                content += System.lineSeparator() + currentNode.toString();
+//                            }
 
                             runOnUiThread(new Runnable() {
 
@@ -210,9 +227,8 @@ public class MainActivity extends AppCompatActivity {
                                     xValue.setText(String.valueOf(xyz[0]));
                                     yValue.setText(String.valueOf(xyz[1]));
 
-                                    int dbInInt = (int) newNode.getDb();
-                                    vButton.setText(String.valueOf(dbInInt));
-                                    setBackgroundColor(dbInInt);
+                                    vButton.setText(String.valueOf(round(rmsDb,1)));
+                                    setBackgroundColor((int)round(rmsDb,1));
                                 }
                             });
                         } else {
@@ -251,25 +267,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setBackgroundColor(int dbInInt) {
-        if (dbInInt > 0) {
+        if (dbInInt > 99) {
             vButton.setBackgroundColor(Color.parseColor("#f44242"));
-        } else if (dbInInt > -10) {
+            vButton.setText("MAX");
+        } else if (dbInInt > 95) {
             vButton.setBackgroundColor(Color.parseColor("#f4417a"));
-        } else if (dbInInt > -25) {
+        } else if (dbInInt > 90) {
             vButton.setBackgroundColor(Color.parseColor("#f4419a"));
-        } else if (dbInInt > -30) {
+        } else if (dbInInt > 85) {
             vButton.setBackgroundColor(Color.parseColor("#f441df"));
-        } else if (dbInInt > -45) {
+        } else if (dbInInt > 80) {
             vButton.setBackgroundColor(Color.parseColor("#d041f4"));
-        } else if (dbInInt > -60) {
+        } else if (dbInInt > 75) {
             vButton.setBackgroundColor(Color.parseColor("#b541f4"));
-        } else if (dbInInt > -85) {
+        } else if (dbInInt > 70) {
             vButton.setBackgroundColor(Color.parseColor("#8841f4"));
-        } else if (dbInInt > -100) {
+        } else if (dbInInt > 65) {
             vButton.setBackgroundColor(Color.parseColor("#6d41f4"));
-        } else if (dbInInt > -115) {
+        } else if (dbInInt > 60) {
             vButton.setBackgroundColor(Color.parseColor("#4143f4"));
-        } else if (dbInInt > -130) {
+        } else if (dbInInt > 55) {
             vButton.setBackgroundColor(Color.parseColor("#283396"));
         } else {
             vButton.setBackgroundColor(Color.parseColor("#1b236d"));
@@ -298,10 +315,15 @@ public class MainActivity extends AppCompatActivity {
         if (isCapturingData) {
             mRecordingThread.stopRecording();
             v.setTextSize(16);
-            v.setText("Saving Data");
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    Toast.makeText(MainActivity.this, "Saving Data...",
+                            Toast.LENGTH_LONG).show();
+                }
+            });
             isCapturingData = false;
 
-            boolean written = DiskWrite.writeToDisk(MainActivity.this, nodeListStart);
+            boolean written = DiskWrite.writeToDisk(nodeListStart, content);
             while (written != true) {
             }
             runOnUiThread(new Runnable() {
@@ -317,7 +339,8 @@ public class MainActivity extends AppCompatActivity {
             v.setTextSize(40);
         }
     }
-    
+
+    // Method called upon clicking the set frequency button
     public void setFrequency(View view) {
         runOnUiThread(new Runnable() {
             @Override
@@ -327,6 +350,11 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+    }
+
+    private static double round (double value, int precision) {
+        int scale = (int) Math.pow(10, precision);
+        return (double) Math.round(value * scale) / scale;
     }
 
 }
