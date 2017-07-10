@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Visualizing Real-Time Point-Cloud Sound Intensity Data via Voronoi Tesselation</title>
+<title>SFF WebViz</title>
 <meta property='og:title' content="Visualizing Real-Time Point-Cloud Sound Intensity Data via Voronoi Tesselation">
 <meta property="og:description" content="Here's a prototype of our sound field viz server, working with simulated data for room mode measurements." />
 <meta property="og:image" content="http://hedges.belmont.edu/~shawley/voronoi.png">
@@ -30,11 +30,12 @@
 <body>
 
 
-<h2>Visualizing Real-Time Point-Cloud Sound Intensity Data via Voronoi Tesselation</h2>
-This is for the Google Tango app project, which uses a client-server model whereby the Tango ("client")
-sends its measurements via WebSockets to this vizualization server.<br>
-You can pan and zoom.
-Works best with Chrome browser; Firefox is slow.<br>
+<h2>Sound Fields Forever: Visualization Server</h2>
+The Tango device/app ("client") sends its measurements via WebSockets to this vizualization server.<br>
+The shapes of the colored zones are determined by a <a href="https://github.com/d3/d3-voronoi">Voronoi tesselation</a>
+around each site where the Tango took data.<br>
+You can pan and zoom. Works best with Chrome browser; Firefox is slow.<br>
+(Note: "Smooth" is currently a hack; it just overlays diffuse semi-transparent colored circles.)<br>
 <br>
 
 
@@ -58,23 +59,29 @@ Filter freq:
 <input type="checkbox" id="sitesToggle" >Sites
 <!--<button id="sitesToggle">Toggle Sites</button>-->
 <input type="checkbox" id="boundsToggle" >Bounds
-<input type="checkbox" id="blurToggle" checked>Blur</button>
+<input type="checkbox" id="blurToggle" checked>Smooth</button>
 <br>
 
 <button id="saveData">Save Data</button>
 <button id="clear">Erase Data</button>
+<button id="saveImage">Save Image</button>
 <form id="myform" style="display:inline-block;">
     Upload Data:<input id="myfile" name="files[]" multiple="" type="file"/>
 </form>
-<button id="saveImage">Save Image</button>
-
-
 <br>
 
-<svg width="500" height="500" id="figureSvg" xmlns="http://www.w3.org/2000/svg"></svg>
-<textarea rows="15" cols="40" style="vertical-align:top" id="notesField">
-Notes:
-</textarea>
+<table border="0px">   <!-- Wanted to use div & CSS instead of table, but this works!-->
+  <tr>
+    <td>
+      <svg width="500" height="500" id="figureSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+    </td>
+    <td style="vertical-align:top">
+      <textarea rows="15" cols="40" style="vertical-align:top" id="notesField">Notes:
+</textarea><br>
+      When saving images, Notes get included in SVG file as metadata.
+    </td>
+  </tr>
+</table>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
@@ -234,7 +241,7 @@ Notes:
           .data(voronoi.polygons(sites))
           .enter().append("path")
           .style("fill", function (d,i) { return scale_color(dB_plot[i]); })
-          .style('fill-opacity',(showBlur ? 0.8 : 0.99))
+          //.style('fill-opacity',(showBlur ? 0.8 : 0.99))
           .style('stroke', (showBounds ? "#000" : "none"))
           .call(redrawPolygon);
       polygon.attr("transform", transform);
@@ -242,26 +249,34 @@ Notes:
     add_polygons();
 
 
-    function add_blurries() {
-          //fill rect based on data
-        var fill_fac = 40;
-        var filling_w = width / fill_fac;// 19 points on x axis
-        var filling_h = height / fill_fac;
+    function add_blurries() {   // adds a buch of rectangular blur effects all over the place
+        var diagram = voronoi(sites);
+
+        var nblurries = Math.floor(npoints/4);
+        var  blurrySites = d3.range(nblurries)
+                .map(function(d) { return [ Math.random()*xextents.max, Math.random()*yextents.max]; });
+
+        //blurrySites = sites;
+        var radius = 15;
 
         blurries = svg.append("g")
             .attr("class", "blurries")
             .selectAll("rect")
-            .data(sites)
+            .data(blurrySites)
             .enter().append("circle")
-            .attr("cx", function (d) { return 5+scale_x(+d[0]) - filling_w/2; }) // the 5 just seems to help calibrate
-            .attr("cy", function (d) { return 5+scale_y(+d[1]) - filling_h/2; })
-            .attr("r", filling_w)
-            .style("fill", function (d,i) { return scale_color(dB_plot[i]); })
-            .style('fill-opacity', (showBlur ? 0.5 : 0))
+            .attr("cx", function (d) { return +scale_x(+d[0]); })
+            .attr("cy", function (d) { return +scale_y(+d[1]); })
+            .attr("r", radius)
+            .style("fill", function (d) {
+                 return scale_color(dB_plot[diagram.find(d[0],d[1]).index]); // color using nearest site
+            })
+            .style('fill-opacity', 0.5)
             .attr("filter", "url(#blur)");
         blurries.attr("transform", transform);
     }
-    add_blurries()
+    if (showBlur) {
+      add_blurries();
+    }
 
    //------ end smoothing
 
@@ -278,7 +293,9 @@ Notes:
             .call(redrawSite);
         site.attr("transform", transform);
     }
-    add_sites()
+    if (showSites) {
+      add_sites()
+    }
 
     function redrawPolygon(polygon) {
       polygon
@@ -320,9 +337,10 @@ Notes:
       } else {
         svg.selectAll("g.blurries").remove();
       }
-      svg.selectAll("g.polygons")  // adjust polygon opacity if blur is/isn't present
-        .selectAll("path")
-        .style('fill-opacity', (showBlur ? 0.8 : 0.99))
+      if (showSites) {  // keep sites on top. could go & indivudally move to top, or just regenerate
+        svg.selectAll("g.sites").remove();  // destroy & remake
+        add_sites();
+      }
     });
 
     // Zooming
@@ -434,10 +452,14 @@ Notes:
           .style("fill", function (d,i) { return scale_color(dB_plot[i]); })
             .call(redrawPolygon);
 
-        svg.selectAll("g.blurries")
-        .selectAll("circle")
-        .style("fill", function (d,i) { return scale_color(dB_plot[i]); })
-        //redrawSite();
+        if (showBlur) {   // easer to just regenerate them
+          svg.selectAll("g.blurries").remove();
+          add_blurries();
+          if (showSites) {  // keep sites on top. could go & indivudally move to top, or just regenerate
+            svg.selectAll("g.sites").remove();  // destroy & remake
+            add_sites();
+          }
+        }
     }
 
 
@@ -505,9 +527,9 @@ Notes:
          .map(function(d,i) { return [(xScreen[i]), (yScreen[i])]; });
 
 
-        var xextents = getMinMaxOf2DIndex(sites,0);
-        var yextents = getMinMaxOf2DIndex(sites,1);
-        console.log("xextents.min = ",xextents.min)
+        xextents = getMinMaxOf2DIndex(sites,0);
+        yextents = getMinMaxOf2DIndex(sites,1);
+        //console.log("xextents.min = ",xextents.min)
         voronoi = d3.voronoi()
             .extent([[xextents.min-1, yextents.min-1], [xextents.max + 1, yextents.max + 1]]);
 
