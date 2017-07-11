@@ -77,7 +77,7 @@ Filter freq:
 <table border="0px">   <!-- Wanted to use div & CSS instead of table, but this works!-->
   <tr>
     <td>
-      <svg width="500" height="500" id="figureSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <svg width="550" height="500" colorbar="50" id="figureSvg" xmlns="http://www.w3.org/2000/svg"></svg>
       <br><i>For more comprehensive (albeit not real-time) visualization options<br>(including full 3D), click "Save Data" and then use
         <a href="https://www.paraview.org/">ParaView</a> to read<br>the CSV file.
         <a target="blank" href="http://hedges.belmont.edu/~shawley/WebVizServer/ParaViewInstrunctions.html">Instructions to use ParaView for unstructured data</a>
@@ -119,17 +119,14 @@ Filter freq:
 
   //----------------------    Graph Handling
 
-    var margin = {top: 20, right: 20, bottom: 30, left: 40},
-      width = 960 - margin.left - margin.right,
-      height = 500 - margin.top - margin.bottom;
 
 
     var svg = d3.select("svg"),
-        width = +svg.attr("width"),
+        width = (+svg.attr("width") - +svg.attr("colorbar")),
         height = +svg.attr("height");
 
-    var colorBar = d3.select("body")
-            .append("svg")
+    /*var colorBar = d3.select("body")
+            .append("svg")*/
 
     var zoom = d3.zoom()
         .scaleExtent([.5, 40])
@@ -140,7 +137,7 @@ Filter freq:
     transform = d3.zoomIdentity;
 
     // Random data to start with
-    var npoints = 2000;
+    var npoints = 3000;
     // generate a parameterized zig-zag;
     var noise_amp = 0.0;
     var x = d3.range(npoints).map(function(i) { return Math.random(); });
@@ -178,16 +175,15 @@ Filter freq:
     var source1y = height;
     var source2y = source1y;
      for (j = 0; j < nZBins; j++) {
-       var f =  32.25*Math.pow(2, j);
-       var lambda = vs/f * ppf;
-       var k = 2*3.1415/lambda;
+       var f =  32.25*Math.pow(2, j);   // different frequencies
+       var lambda = vs/f * ppf;         // wavelength in pixels
+       var k = 2*3.1415/lambda;         // wave number in inverse pixels
        for (i = 0; i < npoints; i++) {
-           var r1 = Math.sqrt( (sites[i][0] - source1x)**2 + (sites[i][1]-source1y)**2 );
+           var r1 = Math.sqrt( (sites[i][0] - source1x)**2 + (sites[i][1]-source1y)**2 ); // distance in pixels
            var r2 = Math.sqrt( (sites[i][0] - source2x)**2 + (sites[i][1]-source2y)**2 );
            dBvals[j][i] = Math.cos(k*r1)/r1 + Math.cos(k*r2)/r2;
-
            dBvals[j][i] *= dBvals[j][i];
-           dBvals[j][i] = 2*Math.log(dBvals[j][i])
+           dBvals[j][i] = 2*Math.log(dBvals[j][i]) + 105;
        }
      }
      //  End demo data
@@ -224,15 +220,29 @@ Filter freq:
 
 
     function set_colors() {
-        dBMax = Math.max.apply(Math, dB_plot);
-        dBMin = Math.min.apply(Math,  dB_plot);
-        colors = dB_plot.map(function(q) { return q - dBMin; });
+        dBIndex = document.getElementById("freqDropDown").value;
+        dB_plot = dBvals[dBIndex];
+        maxHue = 310;
+        dBMax = 100;
+        dBMin = 40;
+        /*this_dBMax = Math.max.apply(Math, dB_plot);
+        this_dBMin = Math.min.apply(Math,  dB_plot);
+       colors = dB_plot.map(function(q) { return q - dBMin; });
         colorMax = Math.max.apply(Math, colors);
         colorMin = Math.min.apply(Math, colors);
-        intendedColorRange = 310;
-        colorScaleFactor = intendedColorRange/(colorMax - colorMin);
+        colorScaleFactor = maxHue/(colorMax - colorMin);
         colors = colors.map(function(q) { return q * colorScaleFactor; });
-        //console.log(" set_colors: colors = ",colors)
+        //console.log(" set_colors: colors = ",colors)*/
+        var linearScale = d3.scaleLinear()
+                            .domain([dBMin,dBMax])
+                            .range([0,maxHue])
+                            .clamp(true)
+
+        colors = dB_plot.slice().map( function(d) { return linearScale(d) });
+      /*  colorMax = Math.max.apply(Math, colors);
+        colorMin = Math.min.apply(Math, colors);
+        console.log("colorMin, colorMax = ",colorMin, colorMax,", dBMax = ",dBMax," this_dBMax = ",this_dBMax)
+        */
     }
     set_colors();
 
@@ -266,7 +276,7 @@ Filter freq:
 
   // voronoi polygons
     function add_polygons() {
-      set_colors();
+       set_colors();
       //console.log("dBIndex = ",dBIndex)
       //console.log(" add_polygons: colors = ",colors)
 
@@ -317,7 +327,7 @@ Filter freq:
 
    // bunch of rectangles made up of local averages within each rectangle
    function add_contour() {
-     var n = 50, m = 50;                    // grid dimensions
+     var n = 64, m = 64;                    // grid dimensions
 
      /*dx = (xextents.max - xextents.min)/n;
      dy = (yextents.max - yextents.min)/m;*/
@@ -378,6 +388,31 @@ Filter freq:
     }
 
     add_sites()
+
+
+    function add_colorbar() {
+      set_colors();
+      nstops = 10;;
+      var legend = svg.append("defs").append("svg:linearGradient").attr("id", "gradient").attr("x1", "100%").attr("y1", "0%").attr("x2", "100%").attr("y2", "100%").attr("spreadMethod", "pad");
+      for (i=0; i<nstops+1; i++) {
+          legend.append("stop").attr("offset", i*(100/nstops)+"%").attr("stop-color", d3.hsl(maxHue*(nstops-i)/nstops, 1, .5)).attr("stop-opacity", 1);
+      }
+      colorbar = svg.append("g")
+          .attr("class", "colorbar")
+          .append("rect")
+          .attr("x",width+8).attr("y",0)
+          .attr("width", 18).attr("height", height)
+	         .style("fill", "url(#gradient)" );
+
+      var dBscale = d3.scaleLinear().range([height, 0]).domain([dBMin, dBMax]);
+
+      g = svg.append("g")
+      .attr("transform", "translate(" + 525 + ",0)")
+      .attr("class", "axis")
+      .call(d3.axisRight(dBscale).ticks(12, "s"));
+
+    }
+    add_colorbar();
 
 
     function redrawPolygon(polygon) {
@@ -574,6 +609,7 @@ Filter freq:
         colorScaleFactor = intendedColorRange/(colorMax - colorMin);
         colors = colors.map(function(q) { return q * colorScaleFactor; });*/
         set_colors();
+        //colorMax = Math.max.apply(Math, colors);
 
         svg.selectAll("g.polygons")
           .selectAll("path")
