@@ -36,6 +36,7 @@
         android:onClick="stateChange"
         android:text="Start Collection!"
         android:textColor="#fff"
+        android:background="@color/colorAccent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintHorizontal_bias="0.502"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -140,6 +141,7 @@
                 android:layout_weight="1"
                 android:ems="10"
                 android:inputType="textPersonName" />
+
             <Button
                 android:id="@+id/buttonFrequency"
                 style="@style/Widget.AppCompat.Button"
@@ -149,6 +151,7 @@
                 android:onClick="setFrequency"
                 android:text="Set Fq" />
         </LinearLayout>
+
     </LinearLayout>
 
 </android.support.constraint.ConstraintLayout>
