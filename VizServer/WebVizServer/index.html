@@ -8,7 +8,7 @@
 <meta property="og:image" content="http://hedges.belmont.edu/~shawley/WebVizServer/sffwebviz.png">
 <meta property="og:url" content="http://hedges.belmont.edu/~shawley/WebVizServer">
 <style>
- 
+
 
 .polygons {
   fill: none;
@@ -392,6 +392,15 @@ Filter freq:
 
     function add_colorbar() {
       set_colors();
+
+      whitespace = svg.append("g")    //whitespace
+            .attr("class", "whitespace")
+            .append("rect")
+            .attr("x",width).attr("y",0)
+            .attr("width", 50).attr("height", height)
+             .style("fill", "#fff" );
+
+
       nstops = 10;;
       var legend = svg.append("defs").append("svg:linearGradient").attr("id", "gradient").attr("x1", "100%").attr("y1", "0%").attr("x2", "100%").attr("y2", "100%").attr("spreadMethod", "pad");
       for (i=0; i<nstops+1; i++) {
