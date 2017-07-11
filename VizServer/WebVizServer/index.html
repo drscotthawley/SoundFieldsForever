@@ -62,8 +62,8 @@ Filter freq:
 <input type="checkbox" id="sitesToggle" >Sites
 <!--<button id="sitesToggle">Toggle Sites</button>-->
 <input type="checkbox" id="boundsToggle" >Bounds
-<input type="checkbox" id="blurToggle">Smooth</button>
-<input type="checkbox" id="gridToggle">Grid</button>
+<input type="checkbox" id="blurToggle">Blur</button>
+<input type="checkbox" id="gridToggle">Contours</button>
 
 <br>
 <button class="button" id="saveData">Save Data</button>
@@ -179,10 +179,15 @@ Filter freq:
        var lambda = vs/f * ppf;         // wavelength in pixels
        var k = 2*3.1415/lambda;         // wave number in inverse pixels
        for (i = 0; i < npoints; i++) {
+           var r = Math.sqrt( (sites[i][0] - (source1x+source2x)/2)**2 + (sites[i][1]-source1y)**2 );
            var r1 = Math.sqrt( (sites[i][0] - source1x)**2 + (sites[i][1]-source1y)**2 ); // distance in pixels
            var r2 = Math.sqrt( (sites[i][0] - source2x)**2 + (sites[i][1]-source2y)**2 );
-           dBvals[j][i] = Math.cos(k*r1)/r1 + Math.cos(k*r2)/r2;
-           dBvals[j][i] *= dBvals[j][i];
+           var pd = 3.14159*Math.abs(r1-r2)/lambda;    // phase difference
+           //dBvals[j][i] = Math.cos(pd)/r1 + Math.cos(pd)/r2;
+           dBvals[j][i] = (Math.cos(k*r1)/r1 + Math.cos(k*r2)/r2)**2;
+           dBvals[j][i] += (Math.sin(k*r1)/r1 + Math.sin(k*r2)/r2)**2;
+
+          // dBvals[j][i] *= dBvals[j][i];
            dBvals[j][i] = 2*Math.log(dBvals[j][i]) + 105;
        }
      }
@@ -224,7 +229,7 @@ Filter freq:
         dB_plot = dBvals[dBIndex];
         maxHue = 310;
         dBMax = 100;
-        dBMin = 40;
+        dBMin = 50;
         /*this_dBMax = Math.max.apply(Math, dB_plot);
         this_dBMin = Math.min.apply(Math,  dB_plot);
        colors = dB_plot.map(function(q) { return q - dBMin; });
