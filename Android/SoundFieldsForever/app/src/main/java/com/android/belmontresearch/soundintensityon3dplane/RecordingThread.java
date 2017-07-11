@@ -189,6 +189,7 @@ public class RecordingThread {
 
     public double[] getRmsdBFiltered() {
         double[] rmsdBF = {rmsdB0, rmsdB1, rmsdB2, rmsdB3, rmsdB4, rmsdB5, rmsdB6};
+        Log.i("RMS", rmsdB0 + rmsdB2 + rmsdB4 + "");
         return rmsdBF;
     }
 }

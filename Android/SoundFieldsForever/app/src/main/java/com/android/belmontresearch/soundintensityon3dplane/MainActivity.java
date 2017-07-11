@@ -164,6 +164,19 @@ public class MainActivity extends AppCompatActivity {
         config.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
         // Tango Service should automatically attempt to recover when it enters an invalid state.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, true);
+
+        // Drift correction allows motion tracking to recover after it loses tracking.
+        // The drift corrected pose is available through the frame pair with
+        // base frame AREA_DESCRIPTION and target frame DEVICE.
+        config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
+
+        try {
+            TangoConfig mConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
+            mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_LEARNINGMODE, true);
+        } catch (TangoErrorException e) {
+            // handle exception
+        }
+
         return config;
     }
 
@@ -175,10 +188,16 @@ public class MainActivity extends AppCompatActivity {
     private void startupTango() {
         // Select coordinate frame pair.
         Log.i("CrashFix", "Tango Started");
-        ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
+        final ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
         framePairs.add(new TangoCoordinateFramePair(
                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                 TangoPoseData.COORDINATE_FRAME_DEVICE));
+        framePairs.add(new TangoCoordinateFramePair(
+                TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                TangoPoseData.COORDINATE_FRAME_DEVICE));
+        framePairs.add(new TangoCoordinateFramePair(
+                TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE));
 
         // Listen for new Tango data.
         mTango.connectListener(framePairs, new Tango.TangoUpdateCallback() {
@@ -188,8 +207,19 @@ public class MainActivity extends AppCompatActivity {
                     // When we receive the first onPoseAvailable callback, we know the device has
                     // located itself.
                     TangoCoordinateFramePair framePair = new TangoCoordinateFramePair();
-                    framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE;
+                    framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION;
                     framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
+
+
+//                    // Area learning
+//                    if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
+//                            && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
+//                        // Process new ADF to device pose data.
+//                    }
+//                    else if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
+//                            && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE) {
+//                        // Process new localization.
+//                    }
 
                     TangoPoseData timePose = mTango.getPoseAtTime(pose.timestamp, framePair);
 
@@ -206,8 +236,8 @@ public class MainActivity extends AppCompatActivity {
 
 //                            Code enables gridded mapping
 //                            if(Math.round(xyz[0] * 100) % 2 == 0 && Math.round(xyz[1] * 100) % 2 == 0) {
-                                xyz[0] = Math.round(xyz[0] * 100);
-                                xyz[1] = Math.round(xyz[1] * 100);
+//                                xyz[0] = Math.round(xyz[0] * 100);
+//                                xyz[1] = Math.round(xyz[1] * 100);
                                 final PointTimeData newNode = new PointTimeData(xyz, rmsDbX, mRecordingThread.getRmsdBFiltered());
                                 if (currentNode == nodeListStart) {
                                     currentNode = newNode;
@@ -227,8 +257,8 @@ public class MainActivity extends AppCompatActivity {
                                     xValue.setText(String.valueOf(xyz[0]));
                                     yValue.setText(String.valueOf(xyz[1]));
 
-                                    vButton.setText(String.valueOf(round(rmsDb,1)));
-                                    setBackgroundColor((int)round(rmsDb,1));
+                                    vButton.setText(String.valueOf(round(rmsDbX,1)));
+                                    setBackgroundColor((int)round(rmsDbX,1));
                                 }
                             });
                         } else {
