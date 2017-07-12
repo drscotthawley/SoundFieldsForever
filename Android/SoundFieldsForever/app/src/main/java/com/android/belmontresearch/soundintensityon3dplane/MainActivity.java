@@ -55,12 +55,18 @@ public class MainActivity extends AppCompatActivity {
     // RecordingThread is the object used to manage audio
     private RecordingThread mRecordingThread;
 
-    private String content = "x,y,z,dB,dB0,dB1,dB2,dB3,dB4,dB5,dB6";
+    private String content;
+    private int nodeBuffer = 0;
+    private int dataPoints = 0;
+    double rmsDbXAverage = 0;
+    double[] rmsdBFilteredAverage = {0, 0, 0, 0, 0, 0};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        resetContentString();
 
         mRecordingThread = new RecordingThread(new AudioDataReceivedListener() {
             @Override
@@ -152,6 +158,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        mRecordingThread.stopRecording();
     }
 
     /**
@@ -164,6 +171,19 @@ public class MainActivity extends AppCompatActivity {
         config.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
         // Tango Service should automatically attempt to recover when it enters an invalid state.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, true);
+
+        // Drift correction allows motion tracking to recover after it loses tracking.
+        // The drift corrected pose is available through the frame pair with
+        // base frame AREA_DESCRIPTION and target frame DEVICE.
+        config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
+
+        try {
+            TangoConfig mConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
+            mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_LEARNINGMODE, true);
+        } catch (TangoErrorException e) {
+            // handle exception
+        }
+
         return config;
     }
 
@@ -175,10 +195,16 @@ public class MainActivity extends AppCompatActivity {
     private void startupTango() {
         // Select coordinate frame pair.
         Log.i("CrashFix", "Tango Started");
-        ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
+        final ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
+//        framePairs.add(new TangoCoordinateFramePair(
+//                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+//                TangoPoseData.COORDINATE_FRAME_DEVICE));
         framePairs.add(new TangoCoordinateFramePair(
-                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                 TangoPoseData.COORDINATE_FRAME_DEVICE));
+//        framePairs.add(new TangoCoordinateFramePair(
+//                TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+//                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE));
 
         // Listen for new Tango data.
         mTango.connectListener(framePairs, new Tango.TangoUpdateCallback() {
@@ -188,57 +214,77 @@ public class MainActivity extends AppCompatActivity {
                     // When we receive the first onPoseAvailable callback, we know the device has
                     // located itself.
                     TangoCoordinateFramePair framePair = new TangoCoordinateFramePair();
-                    framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE;
+                    framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION;
                     framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
 
                     TangoPoseData timePose = mTango.getPoseAtTime(pose.timestamp, framePair);
+
+                    mRecordingThread.startRecording();
 
                     // Gets rms value for microphone input
                     final double rmsDb = mRecordingThread.getRmsdB();
                     final double rmsDbX = mRecordingThread.getRmsdBX();
 
+                    mIsTangoPoseReady.compareAndSet(false, true);
+                    final float[] xyz = timePose.getTranslationAsFloats();
+
+                    runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            //stuff that updates ui
+                            xValue.setText(String.valueOf(xyz[0]));
+                            yValue.setText(String.valueOf(xyz[1]));
+
+                            vButton.setText(String.valueOf(round(rmsDbX,1)));
+                            setBackgroundColor((int)round(rmsDbX,1));
+                        }
+                    });
+
 //                   reduces the amount of UI manipulation
 //
                     if(isCapturingData) {
-                        if (rmsDb > -9000 && rmsDb != 0 ) {
-                            mIsTangoPoseReady.compareAndSet(false, true);
-                            final float[] xyz = timePose.getTranslationAsFloats();
 
+                        if(nodeBuffer == 0) {
+                            rmsDbXAverage = rmsDbX;
+                            rmsdBFilteredAverage = mRecordingThread.getRmsdBFiltered();
+                            nodeBuffer++;
+                        } else if (nodeBuffer < 5) {
+//                            final PointTimeData newNode = new PointTimeData(xyz, rmsDbX, mRecordingThread.getRmsdBFiltered());
+//                            if (currentNode == nodeListStart) {
+//                                currentNode = newNode;
+//                            } else {
+//                                currentNode.setNextNode(newNode);
+//                                currentNode = currentNode.getNextNode();
+//                            }
+                            rmsDbXAverage += rmsDbX;
+                            for(int i=0; i<rmsdBFilteredAverage.length; i++) {
+                                rmsdBFilteredAverage[i] += mRecordingThread.getRmsdBFiltered()[i];
+                            }
+                            nodeBuffer++;
+                        } else {
+                            rmsDbXAverage = rmsDbXAverage/5;
+                            for(int j=0; j<rmsdBFilteredAverage.length; j++) {
+                                rmsdBFilteredAverage[j] = rmsdBFilteredAverage[j]/5;
+                            }
+                            PointTimeData averageNode = new PointTimeData(xyz, rmsDbXAverage, rmsdBFilteredAverage);
+                            content += System.lineSeparator() + averageNode.toString();
+                            nodeBuffer = 0;
+                            dataPoints++;
+                            Log.i("Data", averageNode.toString());
+                            Log.i("Data", dataPoints + "");
+                        }
 //                            Code enables gridded mapping
 //                            if(Math.round(xyz[0] * 100) % 2 == 0 && Math.round(xyz[1] * 100) % 2 == 0) {
-                                xyz[0] = Math.round(xyz[0] * 100);
-                                xyz[1] = Math.round(xyz[1] * 100);
-                                final PointTimeData newNode = new PointTimeData(xyz, rmsDbX, mRecordingThread.getRmsdBFiltered());
-                                if (currentNode == nodeListStart) {
-                                    currentNode = newNode;
-                                } else {
-                                    currentNode.setNextNode(newNode);
-                                    currentNode = currentNode.getNextNode();
-                                }
-
-                                content += System.lineSeparator() + currentNode.toString();
+//                                xyz[0] = Math.round(xyz[0] * 100);
+//                                xyz[1] = Math.round(xyz[1] * 100);
 //                            }
-
-                            runOnUiThread(new Runnable() {
-
-                                @Override
-                                public void run() {
-                                    //stuff that updates ui
-                                    xValue.setText(String.valueOf(xyz[0]));
-                                    yValue.setText(String.valueOf(xyz[1]));
-
-                                    vButton.setText(String.valueOf(round(rmsDb,1)));
-                                    setBackgroundColor((int)round(rmsDb,1));
-                                }
-                            });
-                        } else {
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    vButton.setText("no data");
-                                }
-                            });
+                        if (dataPoints == 10) {
+                            DiskWrite.writeToDisk(content);
+                            resetContentString();
+                            dataPoints = 0;
                         }
+
                     }
                 }
             }
@@ -313,7 +359,7 @@ public class MainActivity extends AppCompatActivity {
     public void stateChange(View view) {
         Button v = (Button) view;
         if (isCapturingData) {
-            mRecordingThread.stopRecording();
+
             v.setTextSize(16);
             runOnUiThread(new Runnable() {
                 public void run() {
@@ -323,7 +369,7 @@ public class MainActivity extends AppCompatActivity {
             });
             isCapturingData = false;
 
-            boolean written = DiskWrite.writeToDisk(nodeListStart, content);
+            boolean written = DiskWrite.writeToDisk(content);
             while (written != true) {
             }
             runOnUiThread(new Runnable() {
@@ -334,7 +380,6 @@ public class MainActivity extends AppCompatActivity {
             });
             v.setText("Start Collection!");
         } else {
-            mRecordingThread.startRecording();
             isCapturingData = true;
             v.setTextSize(40);
         }
@@ -355,6 +400,10 @@ public class MainActivity extends AppCompatActivity {
     private static double round (double value, int precision) {
         int scale = (int) Math.pow(10, precision);
         return (double) Math.round(value * scale) / scale;
+    }
+
+    private void resetContentString() {
+        content = "x,y,z,dB,dB0,dB1,dB2,dB3,dB4,dB5,dB6";
     }
 
 }

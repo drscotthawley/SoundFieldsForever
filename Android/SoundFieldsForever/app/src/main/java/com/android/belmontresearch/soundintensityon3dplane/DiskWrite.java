@@ -14,7 +14,7 @@ public class DiskWrite {
 
     static Socket socket;
 
-    public static boolean writeToDisk(PointTimeData currentNode, String content) {
+    public static boolean writeToDisk(String content) {
 
         try {
             connectWebSocket(content);
