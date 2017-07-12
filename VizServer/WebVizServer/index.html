@@ -47,7 +47,7 @@ You can pan and zoom. Works best with Chrome browser; Firefox is slow.<br>
 Filter freq:
 <div class="dropdown" style="display:inline-block;"
   <form>
-       <select id="freqDropDown" onchange="freqChange(this)" >
+       <select id="freqDropDown" onchange="freqChange()" >
           <option value="0" selected="selected"> Param EQ</option>
           <option value="1"> 62.5 Hz</option>
           <option value="2"> 125 Hz</option>
@@ -59,12 +59,14 @@ Filter freq:
       </select>
   </form>
 </div>
-<input type="checkbox" id="sitesToggle" >Sites
+Sites<input type="checkbox" id="sitesToggle" >
 <!--<button id="sitesToggle">Toggle Sites</button>-->
-<input type="checkbox" id="boundsToggle" >Bounds
-<input type="checkbox" id="blurToggle">Blur</button>
-<input type="checkbox" id="gridToggle">Contours</button>
-
+Bounds<input type="checkbox" id="boundsToggle" >
+Blur<input type="checkbox" id="blurToggle">
+Contours<input type="checkbox" id="gridToggle">
+<p style="display:inline-block;">Smoothing passes: <input type="range" id="passesSlider" value="0"
+    onchange="document.getElementById('rangeValLabel').innerHTML = Math.floor(this.value/10); sliderChange(this)">
+<em id="rangeValLabel" style="font-style: normal;">0</em></p>
 <br>
 <button class="button" id="saveData">Save Data</button>
 <button class="button" id="clear">Erase Data</button>
@@ -188,9 +190,10 @@ Filter freq:
            dBvals[j][i] += (Math.sin(k*r1)/r1 + Math.sin(k*r2)/r2)**2;
 
           // dBvals[j][i] *= dBvals[j][i];
-           dBvals[j][i] = 2*Math.log(dBvals[j][i]) + 105;
+           dBvals[j][i] = 2*Math.log(dBvals[j][i]) + 107;
        }
      }
+     orig_dBvals = dBvals.slice();  // make a copy (for smoothing)
      //  End demo data
 
 
@@ -203,7 +206,7 @@ Filter freq:
     var sitesChkBox = document.getElementById('sitesToggle');
     var boundsChkBox = document.getElementById('boundsToggle');
     var blurChkBox = document.getElementById('blurToggle');
-    var gridChkBox = document.getElementById('blurToggle');
+    var gridChkBox = document.getElementById('gridToggle');
     var showSites = sitesChkBox.checked;
     var showBounds = boundsChkBox.checked;
     var showBlur = blurChkBox.checked;
@@ -229,7 +232,7 @@ Filter freq:
         dB_plot = dBvals[dBIndex];
         maxHue = 310;
         dBMax = 100;
-        dBMin = 50;
+        dBMin = 35;
         /*this_dBMax = Math.max.apply(Math, dB_plot);
         this_dBMin = Math.min.apply(Math,  dB_plot);
        colors = dB_plot.map(function(q) { return q - dBMin; });
@@ -336,8 +339,11 @@ Filter freq:
 
      /*dx = (xextents.max - xextents.min)/n;
      dy = (yextents.max - yextents.min)/m;*/
-     dx = width / n;
-     dy = height / m;
+     grid_width = width; xextents.max + 20;
+     grid_height = height; yextents.max + 20;
+
+     dx = grid_width / n;
+     dy = grid_height / m;
 
     var dBIndex = document.getElementById("freqDropDown").value;
      var dB_plot = dBvals[dBIndex];
@@ -350,7 +356,7 @@ Filter freq:
       for (var j = 0.5, k = 0; j < m; ++j) {   // center of each cell?
         for (var i = 0.5; i < n; ++i, ++k) {
           loc = [i*dx, j*dy]
-          ind = diagram.find(loc[0],loc[1],200).index; // find nearest site
+          ind = diagram.find(loc[0],loc[1]).index; // find nearest site
            values[k] = colors[ind];  // assign color based on nearest value
         }
       }
@@ -363,7 +369,7 @@ Filter freq:
           .thresholds(d3.range(0, 310, 12))
           (values))
           .enter().append("path")
-          .attr("d", d3.geoPath(d3.geoIdentity().scale(width / n)))
+          .attr("d", d3.geoPath(d3.geoIdentity().scale(grid_width / n)))
           .style("fill", function(d,i) { return d3.hsl( d.value, 1, .5 ); })
           //.style('fill-opacity',)
           .style("stroke","none");
@@ -606,11 +612,11 @@ Filter freq:
 
 
     // Freq Change
-    function freqChange(option) {
+    function freqChange() {
         //console.log(option.value);
         //basefreq = 250.0;
         //freq = option.value*1.0
-        freqBin = option.value;
+        //freqBin = option.value;
         var dBIndex = document.getElementById("freqDropDown").value;
         dB_plot = dBvals[dBIndex];
 
@@ -689,6 +695,8 @@ Filter freq:
 
     function updateData(x,y,z,dBVals) {
         npoints = x.length;
+        console.log("npoints = ",npoints)
+
         worldCoords = d3.range(npoints)
         for (p=0; p < npoints; p++) {
           worldCoords[p][0] = x[p];
@@ -720,6 +728,8 @@ Filter freq:
         voronoi = d3.voronoi()
             .extent([[xextents.min-1, yextents.min-1], [xextents.max + 1, yextents.max + 1]]);
 
+        orig_dBvals = dBvals.slice();  // make a copy (for smoothing)
+
         var dBIndex = document.getElementById("freqDropDown").value;
         dB_plot = dBvals[dBIndex];
 
@@ -730,18 +740,201 @@ Filter freq:
         if (showBlur) {
            add_blurries();
         }
+        if (showGrid) {
+           add_grid();
+        }
         add_sites();
 
-        freqChange(document.getElementById("freqDropDown"));
+        freqChange();
 
     }
 
-    // from http://techslides.com/demos/d3/svg-to-image-1.html
 
 
-//svg.selectAll("g").attr("transform", "rotate(-15)");
-// svg.selectAll("g.sites").attr("transform", "rotate(-15)");
- //svg.selectAll("g.blurries").attr("transform", "rotate(-15)");
+// Routines related to smoothing -------------------------------------
+
+// since d3.vornoi.triangles stores site coords instead of indices...i need this routine
+function siteIndex(siteCoords, sites) {
+  for (i=0; i<sites.length; i++) {
+    if (siteCoords == sites[i]) {
+      return i;
+    }
+  }
+  return null;
+}
+
+// make a triangles array that stores site indices instead of coordinates
+function make_mytriangles(triangles,sites) {
+  var mytriangles = new Array(triangles.length);
+  for (t=0; t<triangles.length; t++) {
+    mytriangles[t] = [ siteIndex(triangles[t][0],sites), siteIndex(triangles[t][1],sites), siteIndex(triangles[t][2],sites)]
+  }
+  return mytriangles;
+}
+
+// d3.js doesn't supply its own function to do this, so....
+function get_siteInfo(sites,mytriangles) {       // my_triangles uses indices rather than coordinates
+    // Given a triangular mesh (e.g. a Delaunay triangulation)
+    // returns an array of the list of neighbors (connected sites) for each site
+    // i.e. returns neigh[1..nsites][list of neighbors at each site]
+    //   and it returns a list of the triangles which each site is a vertex of
+    //
+    // Note that sites/neighbors are referred to by their indices in the sites array, not their
+    //     coordinates, thus this works in 'arbirary' # of coordinate-dimenions
+    var neighbors = new Array(sites.length);  // list of site indices
+    var vertexOf = new Array(sites.length);   // list of triangle indices
+    for (i=0; i < sites.length; i++ ) {
+       neighbors[i] = new Array()
+       vertexOf[i] = new Array()
+    }
+    for (t=0; t < mytriangles.length; t++ ) {
+       for (tsi=0; tsi < 3; tsi++) {  // loop through each point in triangle
+         //console.log("mytriangles[",t,"][,",tsi,"] = ",mytriangles[t][tsi])
+         if (!vertexOf[mytriangles[t][tsi]].includes(t)) {
+            vertexOf[mytriangles[t][tsi]].push(t)   // push the triangle number, not its vertices
+         }
+          for (tsj=0; tsj < 3; tsj++) {    // for each of the other two points in the triangle
+              if (tsi !== tsj) {
+                 // if this neighbor is not already listed, then add it to the list
+                 if (!neighbors[mytriangles[t][tsi]].includes(mytriangles[t][tsj])) {
+                 		neighbors[mytriangles[t][tsi]].push(mytriangles[t][tsj])
+                 }
+              }
+          }
+       }
+    }
+    return { neighbors: neighbors, vertexOf : vertexOf};
+}
+
+
+function find_nearest(point,sites) {
+   min_rsq = Infinity;     // no point taking sqrt, use rsq = r**2
+   var near = null;
+   for (i=0; i < sites.length; i++) { // there's gotta be a faster way that searching all sites
+       rsq = (point[0]-sites[i][0])**2 + (point[1]-sites[i][1])**2;
+       if (rsq < min_rsq) {
+           min_rsq = rsq;
+           near = i;
+       }
+   }
+   return near;
+}
+
+function ptInTriangle(p, p0, p1, p2) {
+    // Sources:
+    //    https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle
+    //    https://jsfiddle.net/PerroAZUL/zdaY8/1/
+
+    var A = 1/2 * (-p1[1] * p2[0] + p0[1] * (-p1[0] + p2[0]) + p0[0] * (p1[1] - p2[1]) + p1[0] * p2[1]);
+    var sign = A < 0 ? -1 : 1;
+    var s = (p0[1] * p2[0] - p0[0] * p2[1] + (p2[1] - p0[1]) * p[0] + (p0[0] - p2[0]) * p[1]) * sign;
+    var t = (p0[0] * p1[1] - p0[1] * p1[0] + (p0[1] - p1[1]) * p[0] + (p1[0] - p0[0]) * p[1]) * sign;
+    return s > 0 && t > 0 && (s + t) < 2 * A * sign;
+}
+
+function triangle_containing(point, sites, mytriangles, vertexOf) {
+  // given a physical point,  returns the index of which (if any) triangle contains it (in 2D)
+  var nearest =  find_nearest(point,sites); //d3.find[] supplies this funcitoinality
+
+
+  // check the triangles that contain nearest; fast & usually works but occasionally fails to find valid triangle
+  for (t=0; t < vertexOf[nearest].length; t++) {
+      p0 = sites[  mytriangles[ vertexOf[nearest][t] ][0]  ];
+      p1 = sites[  mytriangles[ vertexOf[nearest][t] ][1]  ];
+      p2 = sites[  mytriangles[ vertexOf[nearest][t] ][2]  ];
+      if (ptInTriangle(point,p0,p1,p2)) {
+         return vertexOf[nearest][t];
+      }
+  }
+  // in rare cases where the above fails, we also follow up with the following
+  //  (very) slower method just in case
+  //  A faster method would be to check only the neighbors of the nearest neighbor
+  //      but for now, we check ALL the triangles
+  for (t=0; t < mytriangles.length; t++) {   // ok here's the slow but sure version
+      p0 = sites[  mytriangles[t][0]  ];
+      p1 = sites[  mytriangles[t][1]  ];
+      p2 = sites[  mytriangles[t][2]  ];
+      if (ptInTriangle(point,p0,p1,p2)) {
+         return t;
+      }
+  }
+  //console.log(" *** Triangle not found!")
+  return null;
+}
+
+function tri_area(a,b,c) {    // a, b, c are coordinates [x,y]
+  // half the absolute value of the 'cross-product' of any two sides.
+   return Math.abs( a[0]*b[1] + b[0]*c[1] + c[0]*a[1] - a[0]*c[1] - b[0]*a[1] - c[0]*b[1])/2
+}
+
+function barycentric_interp(p, tri, sites, zvals) {
+  // tri is a bounding triangle that uses indices (we need this to index zvals[])
+  // zvals is *one* frequency band, i.e. dBvals[i]
+  if (null == tri) {
+    return null;
+  }
+  const val0 = zvals[tri[0]];
+  const val1 = zvals[tri[1]];
+  const val2 = zvals[tri[2]];
+  const A = tri_area(sites[tri[0]], sites[tri[1]], sites[tri[2]]);
+  const A0 = tri_area( p, sites[tri[1]], sites[tri[2]]);
+  const A1 = tri_area( p, sites[tri[0]], sites[tri[2]]);
+  const A2 = tri_area( p, sites[tri[0]], sites[tri[1]]);
+  //console.log("A, A0, A1, A2 = ",A, A0, A1, A2)
+  return (A0*val0 + A1*val1 + A2*val2 )/A;
+}
+
+var triangles = voronoi.triangles(sites);
+var mytriangles = make_mytriangles(triangles,sites);
+
+
+console.log("Smoothing: Getting site info...")
+var a = performance.now();
+siteInfo = get_siteInfo(sites,mytriangles)
+neighbors = siteInfo.neighbors;
+vertexOf = siteInfo.vertexOf;
+var b = performance.now();
+console.log('...this took ' + (b - a) + ' ms.');
+
+function smooth_by_neighbors(passes) {
+    //console.log( "nearest val = ",zvals[find_nearest(point,sites)]);
+    for (i_band = 0;  i_band < orig_dBvals.length; i_band++) {
+        zvals = orig_dBvals[i_band].slice();
+        for (p=0; p < passes; p++ ) {
+            var new_zvals = zvals.slice();    // tmp array
+            for (i=0; i< new_zvals.length; i++) {
+                var sum = 0.0;
+                //console.log("i, vertexOf[i].length = ",i,vertexOf[i].length);
+                for (t=0; t < vertexOf[i].length; t++) {
+                    //console.log("t, vertexOf[i][t] = ",t,vertexOf[i][t]);
+                    var this_tri = mytriangles[ vertexOf[i][t] ];
+                    sum += dBvals[i_band][ this_tri[0]] + dBvals[i_band][this_tri[1]] + dBvals[i_band][this_tri[2]];
+                }
+                var avg = sum / (3 * vertexOf[i].length)
+                new_zvals[i] = avg;
+            }
+            zvals = new_zvals;
+        }
+        dBvals[i_band] = zvals;
+    }
+    //console.log( "new nearest val = ",zvals[find_nearest(point,sites)]);
+
+    freqChange();
+
+}
+
+function sliderChange() {
+  val = Math.floor(document.getElementById('passesSlider').value/10);
+  console.log("Running ",val," smoothing passes...");
+  var a = performance.now();
+  smooth_by_neighbors(val);
+  var b = performance.now();
+  console.log('...that took ' + (b - a) + ' ms.');
+
+}
+
+
+
 
 </script>
 
