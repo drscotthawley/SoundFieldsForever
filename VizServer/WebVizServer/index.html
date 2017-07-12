@@ -59,12 +59,12 @@ Filter freq:
       </select>
   </form>
 </div>
-Sites<input type="checkbox" id="sitesToggle" >
+Sites:<input type="checkbox" id="sitesToggle" >
 <!--<button id="sitesToggle">Toggle Sites</button>-->
-Bounds<input type="checkbox" id="boundsToggle" >
-Blur<input type="checkbox" id="blurToggle">
-Contours<input type="checkbox" id="gridToggle">
-<p style="display:inline-block;">Smoothing passes: <input type="range" id="passesSlider" value="0"
+Bounds:<input type="checkbox" id="boundsToggle" >
+Blur:<input type="checkbox" id="blurToggle">
+Contours:<input type="checkbox" id="gridToggle">
+<p style="display:inline-block;">Smoothing passes:<input type="range" id="passesSlider" value="0"
     onchange="document.getElementById('rangeValLabel').innerHTML = Math.floor(this.value/10); sliderChange(this)">
 <em id="rangeValLabel" style="font-style: normal;">0</em></p>
 <br>
@@ -721,6 +721,7 @@ Contours<input type="checkbox" id="gridToggle">
         sites = d3.range(npoints)
          .map(function(d,i) { return [(xScreen[i]), (yScreen[i])]; });
 
+        setup_siteInfo(); // now that we have new sites, we need neew siteinfo
 
         xextents = getMinMaxOf2DIndex(sites,0);
         yextents = getMinMaxOf2DIndex(sites,1);
@@ -884,17 +885,20 @@ function barycentric_interp(p, tri, sites, zvals) {
   return (A0*val0 + A1*val1 + A2*val2 )/A;
 }
 
-var triangles = voronoi.triangles(sites);
-var mytriangles = make_mytriangles(triangles,sites);
-
-
-console.log("Smoothing: Getting site info...")
-var a = performance.now();
-siteInfo = get_siteInfo(sites,mytriangles)
-neighbors = siteInfo.neighbors;
-vertexOf = siteInfo.vertexOf;
-var b = performance.now();
-console.log('...this took ' + (b - a) + ' ms.');
+function setup_siteInfo() {
+    console.log("Getting site info...")
+    triangles = voronoi.triangles(sites);
+    mytriangles = make_mytriangles(triangles,sites);
+    var a = performance.now();
+    siteInfo = get_siteInfo(sites,mytriangles)
+    neighbors = siteInfo.neighbors;
+    vertexOf = siteInfo.vertexOf;
+    var b = performance.now();
+    console.log('...this took ' + (b - a) + ' ms.');
+    console.log("neighbors.length = ",neighbors.length)
+    console.log("vertexOf.length = ",vertexOf.length)
+}
+setup_siteInfo();
 
 function smooth_by_neighbors(passes) {
     //console.log( "nearest val = ",zvals[find_nearest(point,sites)]);
@@ -904,7 +908,7 @@ function smooth_by_neighbors(passes) {
             var new_zvals = zvals.slice();    // tmp array
             for (i=0; i< new_zvals.length; i++) {
                 var sum = 0.0;
-                //console.log("i, vertexOf[i].length = ",i,vertexOf[i].length);
+                //console.log("i, vertexOf[i] = ",i,vertexOf[i]);
                 for (t=0; t < vertexOf[i].length; t++) {
                     //console.log("t, vertexOf[i][t] = ",t,vertexOf[i][t]);
                     var this_tri = mytriangles[ vertexOf[i][t] ];
