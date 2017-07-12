@@ -65,14 +65,15 @@ Bounds:<input type="checkbox" id="boundsToggle" >
 Blur:<input type="checkbox" id="blurToggle">
 Contours:<input type="checkbox" id="gridToggle">
 <p style="display:inline-block;">Smoothing passes:<input type="range" id="passesSlider" value="0"
-    onchange="document.getElementById('rangeValLabel').innerHTML = Math.floor(this.value/10); sliderChange(this)">
+    onchange="sliderChange(this)">
 <em id="rangeValLabel" style="font-style: normal;">0</em></p>
 <br>
+Append:<input type="checkbox" id="appendToggle" checked>
 <button class="button" id="saveData">Save Data</button>
 <button class="button" id="clear">Erase Data</button>
 <button class="button" id="saveImage">Save Image</button>
 <form id="myform" style="display:inline-block;">
-    Upload Data:<input id="myfile" name="files[]" multiple="" type="file"/>
+    Upload Data:<input id="myfile" name="files[]" multiple="" type="file" accept=".csv"/>
 </form>
 <br>
 
@@ -202,15 +203,15 @@ Contours:<input type="checkbox" id="gridToggle">
     /*var showSites = true;
     var showBounds = true;
     var showBlur = true;*/
-
-    var sitesChkBox = document.getElementById('sitesToggle');
+    /*var sitesChkBox = document.getElementById('sitesToggle');
     var boundsChkBox = document.getElementById('boundsToggle');
     var blurChkBox = document.getElementById('blurToggle');
-    var gridChkBox = document.getElementById('gridToggle');
-    var showSites = sitesChkBox.checked;
-    var showBounds = boundsChkBox.checked;
-    var showBlur = blurChkBox.checked;
-    var showGrid = gridChkBox.checked;
+    var gridChkBox = document.getElementById('gridToggle');*/
+    var showSites = document.getElementById('sitesToggle').checked;
+    var showBounds = document.getElementById('boundsToggle').checked;
+    var showBlur = document.getElementById('blurToggle').checked;
+    var showGrid = document.getElementById('gridToggle').checked;
+    var appendMode = document.getElementById('appendToggle').checked;
 
     var g = svg.append("g")
         .attr("transform", "translate(" + 0+ "," + 0 + ")");
@@ -723,6 +724,7 @@ Contours:<input type="checkbox" id="gridToggle">
 
         setup_siteInfo(); // now that we have new sites, we need neew siteinfo
 
+
         xextents = getMinMaxOf2DIndex(sites,0);
         yextents = getMinMaxOf2DIndex(sites,1);
         //console.log("xextents.min = ",xextents.min)
@@ -733,6 +735,12 @@ Contours:<input type="checkbox" id="gridToggle">
 
         var dBIndex = document.getElementById("freqDropDown").value;
         dB_plot = dBvals[dBIndex];
+
+        /* actually, don't reset slider; this would be annoying in real use
+        document.getElementById("passesSlider").value = 0; // reset smoothing slider
+        document.getElementById('rangeValLabel').innerHTML = 0; // and the slider label
+        */
+        sliderChange();   // re-do smoothing for new data
 
         svg.selectAll("g.polygons").remove(); // delete old polygons
         svg.selectAll("g.blurries").remove(); // delete all blurry circles
@@ -745,6 +753,7 @@ Contours:<input type="checkbox" id="gridToggle">
            add_grid();
         }
         add_sites();
+
 
         freqChange();
 
@@ -929,6 +938,7 @@ function smooth_by_neighbors(passes) {
 
 function sliderChange() {
   val = Math.floor(document.getElementById('passesSlider').value/10);
+  document.getElementById('rangeValLabel').innerHTML = val;
   console.log("Running ",val," smoothing passes...");
   var a = performance.now();
   smooth_by_neighbors(val);
