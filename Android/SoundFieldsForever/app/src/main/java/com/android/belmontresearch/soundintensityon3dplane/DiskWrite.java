@@ -14,10 +14,10 @@ public class DiskWrite {
 
     static Socket socket;
 
-    public static boolean writeToDisk(String content) {
+    public static boolean writeToDisk(String content, String socketName) {
 
         try {
-            connectWebSocket(content);
+            connectWebSocket(content, socketName);
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
@@ -25,13 +25,13 @@ public class DiskWrite {
         return true;
     }
 
-    private static void connectWebSocket(final String content) throws URISyntaxException {
-        socket = IO.socket("http://hedges.belmont.edu:3000/");
+    private static void connectWebSocket(final String content, String socketName) throws URISyntaxException {
+        socket = IO.socket("http://" + socketName);
         socket.on(Socket.EVENT_CONNECT, new Emitter.Listener() {
 
             @Override
             public void call(Object... args) {
-                socket.emit("chat message", content);
+                socket.emit("tango data", content);
                 socket.disconnect();
             }
 

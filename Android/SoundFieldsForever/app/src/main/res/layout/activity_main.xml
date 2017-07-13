@@ -21,7 +21,7 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginTop="27dp" />
+        android:layout_marginTop="16dp" />
 
     <Button
         android:id="@+id/button_collectionState"
@@ -150,6 +150,28 @@
                 android:layout_weight="1"
                 android:onClick="setFrequency"
                 android:text="Set Fq" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/editTextSocketName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ems="10"
+                android:hint="socket name"
+                android:inputType="textPersonName" />
+
+            <Button
+                android:id="@+id/buttonSocketName"
+                android:layout_width="120dp"
+                android:layout_height="wrap_content"
+                android:onClick="setSocketName"
+                android:text="set" />
         </LinearLayout>
 
     </LinearLayout>

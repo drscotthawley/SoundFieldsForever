@@ -50,10 +50,14 @@ public class MainActivity extends AppCompatActivity {
     private TextView yValue;
     private EditText setFreq;
     private Button vButton;
+    private EditText setSocketName;
     private ConstraintLayout layout;
 
     // RecordingThread is the object used to manage audio
     private RecordingThread mRecordingThread;
+
+    // Socket
+    private String socketName = "hedges.belmont.edu:3000/";
 
     private String content;
     private int nodeBuffer = 0;
@@ -83,10 +87,11 @@ public class MainActivity extends AppCompatActivity {
                 yValue = (TextView) findViewById(R.id.textView_yValue);
                 vButton = (Button) findViewById(R.id.button_collectionState);
                 setFreq = (EditText) findViewById(R.id.editTextFrequency);
+                setSocketName = (EditText) findViewById(R.id.editTextSocketName);
+                setFreq.setText(mRecordingThread.centerFrequency + "");
+                setSocketName.setText(socketName);
             }
         });
-
-        setFreq.setText(mRecordingThread.centerFrequency + "");
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 0);
@@ -279,8 +284,9 @@ public class MainActivity extends AppCompatActivity {
 //                                xyz[0] = Math.round(xyz[0] * 100);
 //                                xyz[1] = Math.round(xyz[1] * 100);
 //                            }
-                        if (dataPoints == 10) {
-                            DiskWrite.writeToDisk(content);
+                        if (dataPoints == 100) {
+                            DiskWrite.writeToDisk(content, socketName);
+                            Log.i("Write", content);
                             resetContentString();
                             dataPoints = 0;
                         }
@@ -368,16 +374,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
             isCapturingData = false;
-
-            boolean written = DiskWrite.writeToDisk(content);
-            while (written != true) {
-            }
-            runOnUiThread(new Runnable() {
-                public void run() {
-                    Toast.makeText(MainActivity.this, "Data Saved!",
-                            Toast.LENGTH_LONG).show();
-                }
-            });
+//            DiskWrite.writeToDisk(content, socketName);
             v.setText("Start Collection!");
         } else {
             isCapturingData = true;
@@ -404,6 +401,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void resetContentString() {
         content = "x,y,z,dB,dB0,dB1,dB2,dB3,dB4,dB5,dB6";
+    }
+
+    public void setSocketName(View view) {
+        socketName = setSocketName.getText().toString();
     }
 
 }
