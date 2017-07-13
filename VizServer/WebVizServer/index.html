@@ -70,6 +70,8 @@ Contours:<input type="checkbox" id="gridToggle">
 <br>
 Autoscale:<input type="checkbox" id="autoscaleToggle" onchange="autoscaleChange()" checked>
 Append:<input type="checkbox" id="appendToggle" checked>
+Ignore:<input type="checkbox" id="ignoreToggle">
+
 <button class="button" id="saveData">Save Data</button>
 <button class="button" id="clear">Erase Data</button>
 <button class="button" id="saveImage">Save Image</button>
@@ -115,8 +117,12 @@ Append:<input type="checkbox" id="appendToggle" checked>
     });
     socket.on('tango data', function(msg){   // We got a message!
       //$('#messages').append($('<li>').text(msg));
-      console.log("We got a Websockets message...")
-      applyNewMsg(msg);
+      console.log("Just received a new Websockets message...");
+      if (document.getElementById('ignoreToggle').checked) {
+          console.log("...but ignoring it b/c you have Ignore on");
+      } else {
+        applyNewMsg(msg);
+      }
     });
   });
 
@@ -943,7 +949,7 @@ function setup_siteInfo() {
 setup_siteInfo();
 
 function smooth_by_neighbors(passes) {
-    setup_siteInfo();
+    setup_siteInfo();  // shouldn't have to do this, but let's be sure.
 
     if ( orig_dBvals.length !== nZBins) {
       console.log("smooth_by_neighbors: Error: wrong length of dBvals array");
