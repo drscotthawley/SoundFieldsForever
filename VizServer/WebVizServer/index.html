@@ -68,7 +68,7 @@ Contours:<input type="checkbox" id="gridToggle">
     onchange="sliderChange(this)">
 <em id="rangeValLabel" style="font-style: normal;">0</em></p>
 <br>
-Autoscale:<input type="checkbox" id="autoscaleToggle" onchange="do_autoscale()">
+Autoscale:<input type="checkbox" id="autoscaleToggle" onchange="autoscaleChange()" checked>
 Append:<input type="checkbox" id="appendToggle" checked>
 <button class="button" id="saveData">Save Data</button>
 <button class="button" id="clear">Erase Data</button>
@@ -226,7 +226,7 @@ Append:<input type="checkbox" id="appendToggle" checked>
         dB_plot = dBvals[dBIndex];
         maxHue = 310;
         abs_dBMax = 100;  // default values
-        abs_dBMin = 35;
+        abs_dBMin = 40;
         if (document.getElementById('autoscaleToggle').checked) {
           dBMax = Math.max.apply(Math, dB_plot);
           dBMin = Math.min.apply(Math,  dB_plot);
@@ -446,7 +446,7 @@ Append:<input type="checkbox" id="appendToggle" checked>
             .attr("cy", function(d) { return d[1]; });
     }
 
-    function do_autoscale() {
+    function autoscaleChange() {
         set_colors();
         freqChange();
         svg.selectAll("g.whitespace").remove();
@@ -760,14 +760,13 @@ Append:<input type="checkbox" id="appendToggle" checked>
         sites = d3.range(npoints)
          .map(function(d,i) { return [(xScreen[i]), (yScreen[i])]; });
 
-        setup_siteInfo(); // now that we have new sites, we need neew siteinfo
-
-
         xextents = getMinMaxOf2DIndex(sites,0);
         yextents = getMinMaxOf2DIndex(sites,1);
         //console.log("xextents.min = ",xextents.min)
         voronoi = d3.voronoi()
             .extent([[xextents.min-1, yextents.min-1], [xextents.max + 1, yextents.max + 1]]);
+
+        setup_siteInfo(); // now that we have new sites, we need neew siteinfo
 
         orig_dBvals = dBvals.slice();  // make a copy (for smoothing)
 
@@ -882,8 +881,8 @@ function ptInTriangle(p, p0, p1, p2) {
 
 function triangle_containing(point, sites, mytriangles, vertexOf) {
   // given a physical point,  returns the index of which (if any) triangle contains it (in 2D)
-  var nearest =  find_nearest(point,sites); //d3.find[] supplies this funcitoinality
 
+  var nearest =  find_nearest(point,sites); //d3.find[] supplies similar functionality
 
   // check the triangles that contain nearest; fast & usually works but occasionally fails to find valid triangle
   for (t=0; t < vertexOf[nearest].length; t++) {
@@ -910,11 +909,13 @@ function triangle_containing(point, sites, mytriangles, vertexOf) {
   return null;
 }
 
+// not used yet
 function tri_area(a,b,c) {    // a, b, c are coordinates [x,y]
   // half the absolute value of the 'cross-product' of any two sides.
    return Math.abs( a[0]*b[1] + b[0]*c[1] + c[0]*a[1] - a[0]*c[1] - b[0]*a[1] - c[0]*b[1])/2
 }
 
+// not used yet
 function barycentric_interp(p, tri, sites, zvals) {
   // tri is a bounding triangle that uses indices (we need this to index zvals[])
   // zvals is *one* frequency band, i.e. dBvals[i]
@@ -933,56 +934,51 @@ function barycentric_interp(p, tri, sites, zvals) {
 }
 
 function setup_siteInfo() {
-    //console.log("Getting site info...")
-    //var a = performance.now();
     triangles = voronoi.triangles(sites);
     mytriangles = make_mytriangles(triangles,sites);
     siteInfo = get_siteInfo(sites,mytriangles)
     neighbors = siteInfo.neighbors;
     vertexOf = siteInfo.vertexOf;
-    //var b = performance.now();
-    //console.log('...this took ' + (b - a) + ' ms.');
-    //console.log("neighbors.length = ",neighbors.length)
-    //console.log("vertexOf.length = ",vertexOf.length)
 }
 setup_siteInfo();
 
 function smooth_by_neighbors(passes) {
+    setup_siteInfo();
+
+    if ( orig_dBvals.length !== nZBins) {
+      console.log("smooth_by_neighbors: Error: wrong length of dBvals array");
+    }
     //console.log( "nearest val = ",zvals[find_nearest(point,sites)]);
     for (i_band = 0;  i_band < orig_dBvals.length; i_band++) {
-        zvals = orig_dBvals[i_band].slice();
+        var zvals = orig_dBvals[i_band].slice();
         for (p=0; p < passes; p++ ) {
-            var new_zvals = zvals.slice();    // tmp array
-            //console.log("i_band = ",i_band,", pass = ",p," new_zvals.length = ",new_zvals.length)
-            for (i=0; i< new_zvals.length; i++) {
-                var sum = 0.0;
-                for (t=0; t < vertexOf[i].length; t++) {
-                    //console.log("t, vertexOf[i][t] = ",t,vertexOf[i][t]);
-                    var this_tri = mytriangles[ vertexOf[i][t] ];
-                    sum += dBvals[i_band][ this_tri[0]] + dBvals[i_band][this_tri[1]] + dBvals[i_band][this_tri[2]];
-                }
-                var avg = sum / (3 * vertexOf[i].length)
-                new_zvals[i] = avg;
-            }
-            zvals = new_zvals;
+              var new_zvals = zvals.slice();    // tmp array
+              //console.log("i_band = ",i_band,", pass = ",p," new_zvals.length = ",new_zvals.length)
+              for (i=0; i< new_zvals.length; i++) {
+                    var sum = 0.0;
+                    var voil = vertexOf[i].length;  //just a shorthand
+                    for (t=0; t < voil; t++) {
+                          //console.log("t, vertexOf[i][t] = ",t,vertexOf[i][t]);
+                          var this_tri = mytriangles[ vertexOf[i][t] ];
+                          //sum += zvals[ this_tri[0] ] + zvals[this_tri[1]] + dBvals[this_tri[2]];
+                          sum += zvals[ this_tri[0]] + zvals[this_tri[1]] + zvals[this_tri[2]];
+                    }
+
+                    //sum = 130; //voil = 2;
+                    var avg = sum / (3 * voil)
+                    new_zvals[i] = avg;
+              }
+              zvals = new_zvals;
         }
         dBvals[i_band] = zvals;
     }
-    //console.log( "new nearest val = ",zvals[find_nearest(point,sites)]);
-
     freqChange();
-
 }
 
 function sliderChange() {
   val = Math.floor(document.getElementById('passesSlider').value/10);
   document.getElementById('rangeValLabel').innerHTML = val;
-  //console.log("Running ",val," smoothing passes...");
-  //var a = performance.now();
   smooth_by_neighbors(val);
-  //var b = performance.now();
-  //console.log('...that took ' + (b - a) + ' ms.');
-
 }
 
 
