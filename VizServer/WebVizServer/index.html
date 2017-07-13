@@ -68,6 +68,7 @@ Contours:<input type="checkbox" id="gridToggle">
     onchange="sliderChange(this)">
 <em id="rangeValLabel" style="font-style: normal;">0</em></p>
 <br>
+Autoscale:<input type="checkbox" id="autoscaleToggle" onchange="do_autoscale()">
 Append:<input type="checkbox" id="appendToggle" checked>
 <button class="button" id="saveData">Save Data</button>
 <button class="button" id="clear">Erase Data</button>
@@ -75,6 +76,7 @@ Append:<input type="checkbox" id="appendToggle" checked>
 <form id="myform" style="display:inline-block;">
     Upload Data:<input id="myfile" name="files[]" multiple="" type="file" accept=".csv"/>
 </form>
+
 <br>
 
 <table border="0px">   <!-- Wanted to use div & CSS instead of table, but this works!-->
@@ -107,11 +109,11 @@ Append:<input type="checkbox" id="appendToggle" checked>
   $(function () {
     var socket = io();
     $('form').submit(function(){
-      socket.emit('chat message', $('#m').val());
+      socket.emit('tango data', $('#m').val());
       $('#m').val('');
       return false;
     });
-    socket.on('chat message', function(msg){   // We got a message!
+    socket.on('tango data', function(msg){   // We got a message!
       //$('#messages').append($('<li>').text(msg));
       console.log("We got a Websockets message...")
       applyNewMsg(msg);
@@ -198,15 +200,6 @@ Append:<input type="checkbox" id="appendToggle" checked>
      //  End demo data
 
 
-
-
-    /*var showSites = true;
-    var showBounds = true;
-    var showBlur = true;*/
-    /*var sitesChkBox = document.getElementById('sitesToggle');
-    var boundsChkBox = document.getElementById('boundsToggle');
-    var blurChkBox = document.getElementById('blurToggle');
-    var gridChkBox = document.getElementById('gridToggle');*/
     var showSites = document.getElementById('sitesToggle').checked;
     var showBounds = document.getElementById('boundsToggle').checked;
     var showBlur = document.getElementById('blurToggle').checked;
@@ -232,8 +225,15 @@ Append:<input type="checkbox" id="appendToggle" checked>
         dBIndex = document.getElementById("freqDropDown").value;
         dB_plot = dBvals[dBIndex];
         maxHue = 310;
-        dBMax = 100;
-        dBMin = 35;
+        abs_dBMax = 100;  // default values
+        abs_dBMin = 35;
+        if (document.getElementById('autoscaleToggle').checked) {
+          dBMax = Math.max.apply(Math, dB_plot);
+          dBMin = Math.min.apply(Math,  dB_plot);
+        } else {
+          dBMin = abs_dBMin;
+          dBMax = abs_dBMax;
+        }
         /*this_dBMax = Math.max.apply(Math, dB_plot);
         this_dBMin = Math.min.apply(Math,  dB_plot);
        colors = dB_plot.map(function(q) { return q - dBMin; });
@@ -446,7 +446,13 @@ Append:<input type="checkbox" id="appendToggle" checked>
             .attr("cy", function(d) { return d[1]; });
     }
 
-
+    function do_autoscale() {
+        set_colors();
+        freqChange();
+        svg.selectAll("g.whitespace").remove();
+        svg.selectAll("g.colorbar").remove();
+        add_colorbar();
+    }
 
     // Buttons
     d3.select("#reset").on("click", reset_zoom);
@@ -539,7 +545,20 @@ Append:<input type="checkbox" id="appendToggle" checked>
     function clear_data() {
       svg.selectAll("g.polygons").remove(); // delete old polygons
       svg.selectAll("g.sites").remove(); // delete old sites
+      x = [];
+      y = [];
+      z = [];
+      dBvals[0] = [];    // Fullband-averaged dB value
+      dBvals[1] = [];  // dB in lowest freq band (63Hz)
+      dBvals[2] = [];  // dB in next freq band (125Hz)
+      dBvals[3] = [];  // dB in next freq band (250Hz)
+      dBvals[4] = [];  // dB in next freq band (500Hz)
+      dBvals[5] = [];  // dB in next freq band (1kHz)
+      dBvals[6] = [];  // dB in next freq band (2kHz)
+      dBvals[7] = [];  // dB in next freq band (4kHz)
       npoints = 0;
+      //document.getElementById('passesSlider').value = 0;
+      updateData(x,y,z,dBvals);
     }
 
 
@@ -677,19 +696,38 @@ Append:<input type="checkbox" id="appendToggle" checked>
         return myObject;
     }
 
+    var message_count = 0;
     function applyNewMsg(msg) {
         var parsed = parseMsg(msg);
-        x = parsed.x.map(Number);
-        y = parsed.y.map(Number);
-        z = parsed.z.map(Number);
-        dBvals[0] = parsed.dB.map(Number);    // Fullband-averaged dB value
-        dBvals[1] = parsed.dB0.map(Number);  // dB in lowest freq band (63Hz)
-        dBvals[2] = parsed.dB1.map(Number);  // dB in next freq band (125Hz)
-        dBvals[3] = parsed.dB2.map(Number);  // dB in next freq band (250Hz)
-        dBvals[4] = parsed.dB3.map(Number);  // dB in next freq band (500Hz)
-        dBvals[5] = parsed.dB4.map(Number);  // dB in next freq band (1kHz)
-        dBvals[6] = parsed.dB5.map(Number);  // dB in next freq band (2kHz)
-        dBvals[7] = parsed.dB6.map(Number);  // dB in next freq band (4kHz)
+        message_count += 1;
+
+        appendMode = document.getElementById('appendToggle').checked;
+        if ((appendMode) && (message_count>1)) {
+            x = x.concat(parsed.x.map(Number));
+            y = y.concat(parsed.y.map(Number));
+            z = z.concat(parsed.z.map(Number));
+            dBvals[0] = dBvals[0].concat(parsed.dB.map(Number));    // Fullband-averaged dB value
+            dBvals[1] = dBvals[1].concat(parsed.dB0.map(Number));  // dB in lowest freq band (63Hz)
+            dBvals[2] = dBvals[2].concat(parsed.dB1.map(Number));  // dB in next freq band (125Hz)
+            dBvals[3] = dBvals[3].concat(parsed.dB2.map(Number));  // dB in next freq band (250Hz)
+            dBvals[4] = dBvals[4].concat(parsed.dB3.map(Number));  // dB in next freq band (500Hz)
+            dBvals[5] = dBvals[5].concat(parsed.dB4.map(Number));  // dB in next freq band (1kHz)
+            dBvals[6] = dBvals[6].concat(parsed.dB5.map(Number));  // dB in next freq band (2kHz)
+            dBvals[7] = dBvals[7].concat(parsed.dB6.map(Number));  // dB in next freq band (4kHz)
+        } else {
+            x = parsed.x.map(Number);
+            y = parsed.y.map(Number);
+            z = parsed.z.map(Number);
+            dBvals[0] = parsed.dB.map(Number);    // Fullband-averaged dB value
+            dBvals[1] = parsed.dB0.map(Number);  // dB in lowest freq band (63Hz)
+            dBvals[2] = parsed.dB1.map(Number);  // dB in next freq band (125Hz)
+            dBvals[3] = parsed.dB2.map(Number);  // dB in next freq band (250Hz)
+            dBvals[4] = parsed.dB3.map(Number);  // dB in next freq band (500Hz)
+            dBvals[5] = parsed.dB4.map(Number);  // dB in next freq band (1kHz)
+            dBvals[6] = parsed.dB5.map(Number);  // dB in next freq band (2kHz)
+            dBvals[7] = parsed.dB6.map(Number);  // dB in next freq band (4kHz)
+        }
+
         updateData(x,y,z,dBvals);
     }
 
@@ -895,17 +933,17 @@ function barycentric_interp(p, tri, sites, zvals) {
 }
 
 function setup_siteInfo() {
-    console.log("Getting site info...")
+    //console.log("Getting site info...")
+    //var a = performance.now();
     triangles = voronoi.triangles(sites);
     mytriangles = make_mytriangles(triangles,sites);
-    var a = performance.now();
     siteInfo = get_siteInfo(sites,mytriangles)
     neighbors = siteInfo.neighbors;
     vertexOf = siteInfo.vertexOf;
-    var b = performance.now();
-    console.log('...this took ' + (b - a) + ' ms.');
-    console.log("neighbors.length = ",neighbors.length)
-    console.log("vertexOf.length = ",vertexOf.length)
+    //var b = performance.now();
+    //console.log('...this took ' + (b - a) + ' ms.');
+    //console.log("neighbors.length = ",neighbors.length)
+    //console.log("vertexOf.length = ",vertexOf.length)
 }
 setup_siteInfo();
 
@@ -915,9 +953,9 @@ function smooth_by_neighbors(passes) {
         zvals = orig_dBvals[i_band].slice();
         for (p=0; p < passes; p++ ) {
             var new_zvals = zvals.slice();    // tmp array
+            //console.log("i_band = ",i_band,", pass = ",p," new_zvals.length = ",new_zvals.length)
             for (i=0; i< new_zvals.length; i++) {
                 var sum = 0.0;
-                //console.log("i, vertexOf[i] = ",i,vertexOf[i]);
                 for (t=0; t < vertexOf[i].length; t++) {
                     //console.log("t, vertexOf[i][t] = ",t,vertexOf[i][t]);
                     var this_tri = mytriangles[ vertexOf[i][t] ];
@@ -939,11 +977,11 @@ function smooth_by_neighbors(passes) {
 function sliderChange() {
   val = Math.floor(document.getElementById('passesSlider').value/10);
   document.getElementById('rangeValLabel').innerHTML = val;
-  console.log("Running ",val," smoothing passes...");
-  var a = performance.now();
+  //console.log("Running ",val," smoothing passes...");
+  //var a = performance.now();
   smooth_by_neighbors(val);
-  var b = performance.now();
-  console.log('...that took ' + (b - a) + ' ms.');
+  //var b = performance.now();
+  //console.log('...that took ' + (b - a) + ' ms.');
 
 }
 
