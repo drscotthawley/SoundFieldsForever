@@ -9,6 +9,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -58,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Socket
     private String socketName = "hedges.belmont.edu:3000/";
+    private WebView webview;
 
     private String content;
     private int nodeBuffer = 0;
@@ -88,10 +91,23 @@ public class MainActivity extends AppCompatActivity {
                 vButton = (Button) findViewById(R.id.button_collectionState);
                 setFreq = (EditText) findViewById(R.id.editTextFrequency);
                 setSocketName = (EditText) findViewById(R.id.editTextSocketName);
+                webview = (WebView) findViewById(R.id.webView);
                 setFreq.setText(mRecordingThread.centerFrequency + "");
                 setSocketName.setText(socketName);
             }
         });
+
+        // WebView
+
+        webview.getSettings().setJavaScriptEnabled(true);
+
+        webview.setWebViewClient(new WebViewClient() {
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+            }
+        });
+
+        webview .loadUrl("http://" + socketName);
+//        webview.loadUrl("https://" + socketName);
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 0);
@@ -284,7 +300,7 @@ public class MainActivity extends AppCompatActivity {
 //                                xyz[0] = Math.round(xyz[0] * 100);
 //                                xyz[1] = Math.round(xyz[1] * 100);
 //                            }
-                        if (dataPoints == 100) {
+                        if (dataPoints == 40) {
                             DiskWrite.writeToDisk(content, socketName);
                             Log.i("Write", content);
                             resetContentString();
