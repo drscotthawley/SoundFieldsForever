@@ -9,6 +9,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -58,12 +60,16 @@ public class MainActivity extends AppCompatActivity {
 
     // Socket
     private String socketName = "hedges.belmont.edu:3000/";
+    private WebView webview;
 
     private String content;
     private int nodeBuffer = 0;
     private int dataPoints = 0;
-    double rmsDbXAverage = 0;
-    double[] rmsdBFilteredAverage = {0, 0, 0, 0, 0, 0};
+    private double rmsDbXAverage = 0;
+    private double[] rmsdBFilteredAverage = {0, 0, 0, 0, 0, 0};
+    private float x;
+    private float y;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,10 +94,23 @@ public class MainActivity extends AppCompatActivity {
                 vButton = (Button) findViewById(R.id.button_collectionState);
                 setFreq = (EditText) findViewById(R.id.editTextFrequency);
                 setSocketName = (EditText) findViewById(R.id.editTextSocketName);
+                webview = (WebView) findViewById(R.id.webView);
                 setFreq.setText(mRecordingThread.centerFrequency + "");
                 setSocketName.setText(socketName);
             }
         });
+
+        // WebView
+
+        webview.getSettings().setJavaScriptEnabled(true);
+
+        webview.setWebViewClient(new WebViewClient() {
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+            }
+        });
+
+        webview .loadUrl("http://" + socketName);
+//        webview.loadUrl("https://" + socketName);
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 0);
@@ -253,26 +272,27 @@ public class MainActivity extends AppCompatActivity {
                         if(nodeBuffer == 0) {
                             rmsDbXAverage = rmsDbX;
                             rmsdBFilteredAverage = mRecordingThread.getRmsdBFiltered();
+                            x = xyz[0];
+                            y = xyz[1];
+
                             nodeBuffer++;
                         } else if (nodeBuffer < 5) {
-//                            final PointTimeData newNode = new PointTimeData(xyz, rmsDbX, mRecordingThread.getRmsdBFiltered());
-//                            if (currentNode == nodeListStart) {
-//                                currentNode = newNode;
-//                            } else {
-//                                currentNode.setNextNode(newNode);
-//                                currentNode = currentNode.getNextNode();
-//                            }
                             rmsDbXAverage += rmsDbX;
                             for(int i=0; i<rmsdBFilteredAverage.length; i++) {
                                 rmsdBFilteredAverage[i] += mRecordingThread.getRmsdBFiltered()[i];
                             }
+                            x += xyz[0];
+                            y += xyz[1];
                             nodeBuffer++;
                         } else {
                             rmsDbXAverage = rmsDbXAverage/5;
                             for(int j=0; j<rmsdBFilteredAverage.length; j++) {
                                 rmsdBFilteredAverage[j] = rmsdBFilteredAverage[j]/5;
                             }
-                            PointTimeData averageNode = new PointTimeData(xyz, rmsDbXAverage, rmsdBFilteredAverage);
+                            x = x/5;
+                            y = y/5;
+                            float[] xyzMod = new float[]{x, y, xyz[2]};
+                            PointTimeData averageNode = new PointTimeData(xyzMod, rmsDbXAverage, rmsdBFilteredAverage);
                             content += System.lineSeparator() + averageNode.toString();
                             nodeBuffer = 0;
                             dataPoints++;
@@ -284,7 +304,7 @@ public class MainActivity extends AppCompatActivity {
 //                                xyz[0] = Math.round(xyz[0] * 100);
 //                                xyz[1] = Math.round(xyz[1] * 100);
 //                            }
-                        if (dataPoints == 100) {
+                        if (dataPoints == 40) {
                             DiskWrite.writeToDisk(content, socketName);
                             Log.i("Write", content);
                             resetContentString();
