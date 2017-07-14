@@ -551,6 +551,7 @@ Ignore:<input type="checkbox" id="ignoreToggle">
     function clear_data() {
       svg.selectAll("g.polygons").remove(); // delete old polygons
       svg.selectAll("g.sites").remove(); // delete old sites
+      sites = [];
       x = [];
       y = [];
       z = [];
@@ -702,6 +703,24 @@ Ignore:<input type="checkbox" id="ignoreToggle">
         return myObject;
     }
 
+    function fix_duplicates(x,y,z,dBvals) {
+      //console.log("fix_duplicates: starting...");
+      for (i = 1; i < x.length; i++) {
+          if ((x[i] == x[i-1]) && (y[i] == y[i-1])) { // for now, delete later (adjacent) duplicate
+              //console.log("fix_duplicates: removing at i = ",i,": x, y = ",x[i],y[i]);
+              x.splice(i, 1);     // splice modifies "in place", no equals sign needed
+              y.splice(i, 1);
+              z.splice(i, 1);
+              for (j=0; j< dBvals.length; j++) {
+                dBvals[j].splice(i, 1);
+              }
+              i = i - 1;  // cancel out the i++ that's about to occur in the for loop
+          }
+      }
+      //console.log("fix_duplicates: end.");
+
+    }
+
     var message_count = 0;
     function applyNewMsg(msg) {
         var parsed = parseMsg(msg);
@@ -733,6 +752,8 @@ Ignore:<input type="checkbox" id="ignoreToggle">
             dBvals[6] = parsed.dB5.map(Number);  // dB in next freq band (2kHz)
             dBvals[7] = parsed.dB6.map(Number);  // dB in next freq band (4kHz)
         }
+
+        fix_duplicates(x,y,z,dBvals);  // any lines with identical locations will present problems to the Delaunay triangulation
 
         updateData(x,y,z,dBvals);
     }
@@ -783,7 +804,7 @@ Ignore:<input type="checkbox" id="ignoreToggle">
         document.getElementById("passesSlider").value = 0; // reset smoothing slider
         document.getElementById('rangeValLabel').innerHTML = 0; // and the slider label
         */
-        sliderChange();   // re-do smoothing for new data
+        sliderChange();   // do smoothing for new data, before regenerating polygons, etc.
 
         svg.selectAll("g.polygons").remove(); // delete old polygons
         svg.selectAll("g.blurries").remove(); // delete all blurry circles
@@ -809,10 +830,11 @@ Ignore:<input type="checkbox" id="ignoreToggle">
 // since d3.vornoi.triangles stores site coords instead of indices...i need this routine
 function siteIndex(siteCoords, sites) {
   for (i=0; i<sites.length; i++) {
-    if (siteCoords == sites[i]) {
+    if (siteCoords === sites[i]) {
       return i;
     }
   }
+  console.log("siteIndex: Error, can't find site for siteCoords = ",siteCoords);
   return null;
 }
 
@@ -840,8 +862,9 @@ function get_siteInfo(sites,mytriangles) {       // my_triangles uses indices ra
        neighbors[i] = new Array()
        vertexOf[i] = new Array()
     }
+    //console.log("sites.length = ",sites.length,", mytriangles.length = ",mytriangles.length);
     for (t=0; t < mytriangles.length; t++ ) {
-       for (tsi=0; tsi < 3; tsi++) {  // loop through each point in triangle
+       for (tsi=0; tsi < 3; tsi++) {  // loop through each site in triangle, "triangle site index"
          //console.log("mytriangles[",t,"][,",tsi,"] = ",mytriangles[t][tsi])
          if (!vertexOf[mytriangles[t][tsi]].includes(t)) {
             vertexOf[mytriangles[t][tsi]].push(t)   // push the triangle number, not its vertices
@@ -855,6 +878,13 @@ function get_siteInfo(sites,mytriangles) {       // my_triangles uses indices ra
               }
           }
        }
+    }
+    // Error check: check for zeros in vertexOf
+    for (i=0; i<vertexOf.length; i++) {
+      if (0 == vertexOf[i].length) {
+        console.log("get_siteInfo:  We have a problem. vertexOf[",i,"] = ",vertexOf[i]);
+        //debugger;
+      }
     }
     return { neighbors: neighbors, vertexOf : vertexOf};
 }
@@ -940,8 +970,12 @@ function barycentric_interp(p, tri, sites, zvals) {
 }
 
 function setup_siteInfo() {
-    triangles = voronoi.triangles(sites);
+    var voronoi_big = d3.voronoi();  // without extents clipping
+    triangles = voronoi_big.triangles(sites);
     mytriangles = make_mytriangles(triangles,sites);
+    //console.log("sites = ",sites);
+    //console.log("triangles = ",triangles);
+    //console.log("mytriangles = ",mytriangles);
     siteInfo = get_siteInfo(sites,mytriangles)
     neighbors = siteInfo.neighbors;
     vertexOf = siteInfo.vertexOf;
@@ -949,7 +983,7 @@ function setup_siteInfo() {
 setup_siteInfo();
 
 function smooth_by_neighbors(passes) {
-    setup_siteInfo();  // shouldn't have to do this, but let's be sure.
+    //setup_siteInfo();  // shouldn't have to do this, but let's be sure.
 
     if ( orig_dBvals.length !== nZBins) {
       console.log("smooth_by_neighbors: Error: wrong length of dBvals array");
