@@ -65,8 +65,11 @@ public class MainActivity extends AppCompatActivity {
     private String content;
     private int nodeBuffer = 0;
     private int dataPoints = 0;
-    double rmsDbXAverage = 0;
-    double[] rmsdBFilteredAverage = {0, 0, 0, 0, 0, 0};
+    private double rmsDbXAverage = 0;
+    private double[] rmsdBFilteredAverage = {0, 0, 0, 0, 0, 0};
+    private float x;
+    private float y;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -269,26 +272,27 @@ public class MainActivity extends AppCompatActivity {
                         if(nodeBuffer == 0) {
                             rmsDbXAverage = rmsDbX;
                             rmsdBFilteredAverage = mRecordingThread.getRmsdBFiltered();
+                            x = xyz[0];
+                            y = xyz[1];
+
                             nodeBuffer++;
                         } else if (nodeBuffer < 5) {
-//                            final PointTimeData newNode = new PointTimeData(xyz, rmsDbX, mRecordingThread.getRmsdBFiltered());
-//                            if (currentNode == nodeListStart) {
-//                                currentNode = newNode;
-//                            } else {
-//                                currentNode.setNextNode(newNode);
-//                                currentNode = currentNode.getNextNode();
-//                            }
                             rmsDbXAverage += rmsDbX;
                             for(int i=0; i<rmsdBFilteredAverage.length; i++) {
                                 rmsdBFilteredAverage[i] += mRecordingThread.getRmsdBFiltered()[i];
                             }
+                            x += xyz[0];
+                            y += xyz[1];
                             nodeBuffer++;
                         } else {
                             rmsDbXAverage = rmsDbXAverage/5;
                             for(int j=0; j<rmsdBFilteredAverage.length; j++) {
                                 rmsdBFilteredAverage[j] = rmsdBFilteredAverage[j]/5;
                             }
-                            PointTimeData averageNode = new PointTimeData(xyz, rmsDbXAverage, rmsdBFilteredAverage);
+                            x = x/5;
+                            y = y/5;
+                            float[] xyzMod = new float[]{x, y, xyz[2]};
+                            PointTimeData averageNode = new PointTimeData(xyzMod, rmsDbXAverage, rmsdBFilteredAverage);
                             content += System.lineSeparator() + averageNode.toString();
                             nodeBuffer = 0;
                             dataPoints++;
