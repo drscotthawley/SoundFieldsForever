@@ -14,8 +14,8 @@ io.on('connection', function(socket){
   //socket.on('disconnect', function(){
   //  console.log('user disconnected');
   //});
-  socket.on('chat message', function(msg){   //Not really sure what this does
-    io.emit('chat message', msg);
+  socket.on('tango data', function(msg){   //Not really sure what this does
+    io.emit('tango data', msg);
   });
 });
 
@@ -23,4 +23,3 @@ io.on('connection', function(socket){
 http.listen(3000, function(){
 	  console.log('listening on *:3000');
 });
-
