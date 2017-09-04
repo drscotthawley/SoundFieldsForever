@@ -10,14 +10,16 @@
 First, <a href="https://www.paraview.org/download/">Download</a> and run ParaView.<br>
 <br>
 Then, import your data into a way that ParaView can use:
+(<b>TODO:</b> investigate ParaView Templates so that all this is done automatically!)
 <ol>
    <li>Select File &gt; Open &gt; (whatever your CSV file is), “Open”
-   <li>Click "Apply" on the far-left of the screen (middle height). This gives a spreadsheet view.
-   <li>Click on the name of your CSV file, showing in the upper left.
-   <li>Select Filters (at the very top menu bar) &gt; Alphabetical &gt; Table to Points
-   <li>On the left, change “X Column”, “Y Column”, “Z Column” to “x”, “y,” “z”.
+   <li>On the far-left of the screen under the "Properties" tab (middle-height), click "Apply". This gives a spreadsheet View.  (Which we don't need, so click the "x" in the top-right of the Spreadsheet view to make it go away.)
+   <li>In the upper left under "Pipeline Browser," click on the name of your CSV file.
+   <li>Next you want to apply the "Table To Points" filter.  To do this, select Filters
+     (at the very top menu bar) &gt; Alphabetical &gt; Table to Points.  (Or else do Filters > Search and type "Table to Points" and hit return)
+   <li>On the left, change “X Column”, “Y Column”, “Z Column” to “x”, “y,” “z”.  Click "Apply".
    <li>(And if you want, go down to "Coloring" and change "Solid Color" to "dB")
-   <li>In the upper left, click the “eye icon” next to “TableToPoints1”.  See the path of the Tango!
+   <li>In the upper left, if “eye icon” next to “TableToPoints1” is not colored (i.e. is greyed out), then click on it to show the points.  See the path of the Tango!
 </ol>
 Now you've got options...<br>
 <br>
