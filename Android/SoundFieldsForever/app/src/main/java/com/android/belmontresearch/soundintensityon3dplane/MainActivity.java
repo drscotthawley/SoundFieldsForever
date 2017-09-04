@@ -1,6 +1,7 @@
 package com.android.belmontresearch.soundintensityon3dplane;
 
 import android.Manifest;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -10,7 +11,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -55,11 +55,14 @@ public class MainActivity extends AppCompatActivity {
     private EditText setSocketName;
     private ConstraintLayout layout;
 
+    // Preferences File
+    public static final String PREFS_NAME = "Preferences";
+    private String socketName = "";
+
     // RecordingThread is the object used to manage audio
     private RecordingThread mRecordingThread;
 
     // Socket
-    private String socketName = "hedges.belmont.edu:3000/";
     private WebView webview;
 
     private String content;
@@ -85,6 +88,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Restore Preferences
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        socketName = settings.getString("socketName", "hedges.belmont.edu:3000/");
+
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -102,15 +109,23 @@ public class MainActivity extends AppCompatActivity {
 
         // WebView
 
-        webview.getSettings().setJavaScriptEnabled(true);
+//        webview.getSettings().setJavaScriptEnabled(true);
+//        webview.getSettings().setLoadWithOverviewMode(true);
+//        webview.getSettings().setUseWideViewPort(true);
+//
+//        webview.setWebViewClient(new WebViewClient() {
+//            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+//            }
+//        });
+//
+//        webview.loadUrl("http://" + socketName);
 
-        webview.setWebViewClient(new WebViewClient() {
-            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-            }
-        });
+//        Attempt to fit WebView better by removing certain elements from page
+//        webview.loadUrl("javascript:(function(){ " +
+//                "document.getElementsByClassName('dropdown')[0].style.display='none'; " +
+//                "})()");
 
-        webview .loadUrl("http://" + socketName);
-//        webview.loadUrl("https://" + socketName);
+
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 0);
@@ -425,6 +440,12 @@ public class MainActivity extends AppCompatActivity {
 
     public void setSocketName(View view) {
         socketName = setSocketName.getText().toString();
+
+        // Adds socketName to preferences 
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putString("socketName", socketName);
+
     }
 
 }
