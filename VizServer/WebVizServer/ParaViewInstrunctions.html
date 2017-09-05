@@ -29,7 +29,12 @@ To make it look like our WebViz, you can do the following:
    <li>Now in the bottom-left menu, scroll down to “Coloring”, and change it from “Solid Color” to “dB”
    <li>You can also recolor the path of the Tango from white to black by clicking on TableToPoints1 object, then above Coloring select “Point Gaussian”, and scrolling down, you can change the Gaussian Radius slider to something small.
 </ol>
-To make other visualizations -- volume rendering, isosurfaces, etc. -- I don't know how yet, but once you figure it out let me know! ;-)
+<b>3D Renderings</b>: Volume rendering, isosurfaces, etc.:<br>
+<ol>
+  <li>First turn your Points into a grid via 3D Delaunay triangulation: Click on your "TableToPoints1", then add the Delaunay3D filter.
+    <li> Then you can Slice it or turn into Contours (aka Isosurfaces)...
+     <li>Slicing is easy, just go up and click the Slice tool and click Apply, and move the slice around with the mouse.
+    <li>For Contours/Isosurfaces, click the the Contour tool in the top left. Then scroll down and under "Value Range" click the little scale icon, between the minus and the red X.  Then click Apply.  Choose the colors as needed.
 <hr>
 <i>Scott Hawley, July 2017</i>
 </body>
