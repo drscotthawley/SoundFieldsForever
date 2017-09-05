@@ -37,7 +37,8 @@
 The Tango device/app ("client") sends its measurements via WebSockets to this vizualization server.<br>
 The shapes of the colored zones are determined by a <a href="https://github.com/d3/d3-voronoi">Voronoi tesselation</a>
 around each site where the Tango took data.<br>
-You can pan and zoom. Works best with Chrome browser; Firefox is slow.<br>
+You can pan and zoom (Experimental: hold Shift and then pan to rotate).<br>
+Works best with Chrome browser; Firefox is slow.<br>
 (Note: "Smooth" is currently a hack; it just overlays diffuse semi-transparent colored circles.)<br>
 <br>
 
@@ -134,14 +135,19 @@ Ignore:<input type="checkbox" id="ignoreToggle">
 
     var svg = d3.select("svg"),
         width = (+svg.attr("width") - +svg.attr("colorbar")),
-        height = +svg.attr("height");
+        height = +svg.attr("height")
+        ;
 
-    /*var colorBar = d3.select("body")
-            .append("svg")*/
+
+    var drag = d3.drag().on("drag", function() {
+      console.log("drag event")
+    });
+
+    var trans_ext = 1000;
 
     var zoom = d3.zoom()
         .scaleExtent([.5, 40])
-        .translateExtent([[-100, -100], [width + 100, height + 100]])
+        .translateExtent([[-trans_ext, -trans_ext], [width + trans_ext, height + trans_ext]])
         .on("zoom", zoomed);
 
 
@@ -514,21 +520,16 @@ Ignore:<input type="checkbox" id="ignoreToggle">
 
     rotateAngle = 0;
     function zoomed() {
-        transform = d3.event.transform;
-        //console.log("transform = ",d3.transform(transform))
+        d3et = d3.event.transform;  # just an abbreviation
         if (shiftDown) {
-            rotateAngle +=  d3.event.transform.y/20;
-            //fullTransform = d3.transform;
-            //console.log("fullTransform = ",fullTransform);
-            new_transform ="translate(" + transform.x + ", " + transform.y + ")rotate("+rotateAngle+")";
-            console.log("shift key is down. new_transform = ",new_transform)
-
-            effect_zoom(new_transform)
-        } else {
-            effect_zoom(transform);
+            console.log("shift key is down. rotating. d3.event.transform.y = ",d3et.y);
+            rotateAngle +=  d3et.y/100;
         }
-
+        transform ="translate(" + d3et.x + ", " + d3et.y + ")rotate("+rotateAngle+")scale("+d3et.k+")";
+        effect_zoom(transform);
     }
+
+
     function effect_zoom(transform) {
         if (showSites) {
           site.attr("transform", transform);
@@ -543,6 +544,8 @@ Ignore:<input type="checkbox" id="ignoreToggle">
     }
 
     function reset_zoom() {
+      rotateAngle = 0;
+      transform = d3.zoomIdentity;
       svg.transition()
           .duration(700)
           .call(zoom.transform, d3.zoomIdentity);
