@@ -520,7 +520,7 @@ Ignore:<input type="checkbox" id="ignoreToggle">
 
     rotateAngle = 0;
     function zoomed() {
-        d3et = d3.event.transform;  # just an abbreviation
+        d3et = d3.event.transform;  // just an abbreviation
         if (shiftDown) {
             console.log("shift key is down. rotating. d3.event.transform.y = ",d3et.y);
             rotateAngle +=  d3et.y/100;
