@@ -133,8 +133,13 @@ Ignore:<input type="checkbox" id="ignoreToggle">
 
 
 
-    var svg = d3.select("svg"),
-        width = (+svg.attr("width") - +svg.attr("colorbar")),
+    var svg = d3.select("svg")
+      .on("mousedown", function() {
+        startMouse = d3.mouse(this);
+        startAngle = Math.atan2( startMouse[1] - height/2, startMouse[0] - width/2);
+        console.log("startMouse =",startMouse," startAngle = ",startAngle);
+    });
+    var width = (+svg.attr("width") - +svg.attr("colorbar")),
         height = +svg.attr("height")
         ;
 
@@ -152,6 +157,7 @@ Ignore:<input type="checkbox" id="ignoreToggle">
 
 
     transform = d3.zoomIdentity;
+
 
     // Random data to start with
     var npoints = 3000;
@@ -348,44 +354,46 @@ Ignore:<input type="checkbox" id="ignoreToggle">
 
    // bunch of rectangles made up of local averages within each rectangle
    function add_contour() {
-     var n = 64, m = 64;                    // grid dimensions
+       var n = 64, m = 64;                    // grid dimensions
 
-     /*dx = (xextents.max - xextents.min)/n;
-     dy = (yextents.max - yextents.min)/m;*/
-     grid_width = width; xextents.max + 20;
-     grid_height = height; yextents.max + 20;
+       /*dx = (xextents.max - xextents.min)/n;
+       dy = (yextents.max - yextents.min)/m;*/
+       grid_width = width; xextents.max + 20;
+       grid_height = height; yextents.max + 20;
 
-     dx = grid_width / n;
-     dy = grid_height / m;
+       dx = grid_width / n;
+       dy = grid_height / m;
 
-    var dBIndex = document.getElementById("freqDropDown").value;
-     var dB_plot = dBvals[dBIndex];
+      var dBIndex = document.getElementById("freqDropDown").value;
+       var dB_plot = dBvals[dBIndex];
 
-     set_colors();
-     var diagram = voronoi(sites);
-     var triangles = diagram.triangles;
+       set_colors();
+       var diagram = voronoi(sites);
+       var triangles = diagram.triangles;
 
-     var values = new Array(n * m);
-      for (var j = 0.5, k = 0; j < m; ++j) {   // center of each cell?
-        for (var i = 0.5; i < n; ++i, ++k) {
-          loc = [i*dx, j*dy]
-          ind = diagram.find(loc[0],loc[1]).index; // find nearest site
-           values[k] = colors[ind];  // assign color based on nearest value
+       var values = new Array(n * m);
+        for (var j = 0.5, k = 0; j < m; ++j) {   // center of each cell?
+          for (var i = 0.5; i < n; ++i, ++k) {
+            loc = [i*dx, j*dy]
+            ind = diagram.find(loc[0],loc[1]).index; // find nearest site
+             values[k] = colors[ind];  // assign color based on nearest value
+          }
         }
-      }
-      //console.log("values = ",values)
-      grid = svg.append("g")
-          .attr("class", "grid")
-          .selectAll("path")
-          .data(d3.contours()
-          .size([n, m])
-          .thresholds(d3.range(0, 310, 12))
-          (values))
-          .enter().append("path")
-          .attr("d", d3.geoPath(d3.geoIdentity().scale(grid_width / n)))
-          .style("fill", function(d,i) { return d3.hsl( d.value, 1, .5 ); })
-          //.style('fill-opacity',)
-          .style("stroke","none");
+        //console.log("values = ",values)
+        grid = svg.append("g")
+            .attr("class", "grid")
+            .selectAll("path")
+            .data(d3.contours()
+            .size([n, m])
+            .thresholds(d3.range(0, 310, 12))
+            (values))
+            .enter().append("path")
+            .attr("d", d3.geoPath(d3.geoIdentity().scale(grid_width / n)))
+            .style("fill", function(d,i) { return d3.hsl( d.value, 1, .5 ); })
+            //.style('fill-opacity',)
+            .style("stroke","none")
+            .attr("transform", transform);
+        add_colorbar();
    }
    function add_grid() {
      add_contour();
@@ -415,6 +423,7 @@ Ignore:<input type="checkbox" id="ignoreToggle">
 
 
     function add_colorbar() {
+      svg.selectAll("g.colorbar").remove();   // remove any old colorbar
       set_colors();
 
       whitespace = svg.append("g")    //whitespace
@@ -520,12 +529,19 @@ Ignore:<input type="checkbox" id="ignoreToggle">
 
     rotateAngle = 0;
     function zoomed() {
-        d3et = d3.event.transform;  // just an abbreviation
+      trans_x = d3.event.transform.x
+      trans_y = d3.event.transform.y;
+      trans_k = d3.event.transform.k;
         if (shiftDown) {
-            console.log("shift key is down. rotating. d3.event.transform.y = ",d3et.y);
-            rotateAngle +=  d3et.y/100;
+            //console.log("shift key is down. rotating. d3.event.transform.y = ",d3.event.transform.y);
+            nowMouse = d3.mouse(this);
+            nowAngle = Math.atan2( nowMouse[1] - height/2, nowMouse[0] - width/2);
+            //console.log("nowMouse =",nowMouse," nowAngle = ",nowAngle);
+            angleDiff = nowAngle - startAngle;
+            rotateAngle +=  angleDiff;
         }
-        transform ="translate(" + d3et.x + ", " + d3et.y + ")rotate("+rotateAngle+")scale("+d3et.k+")";
+        transform ="translate(" + trans_x + ", " + trans_y + ")rotate("+rotateAngle+")scale("+trans_k+")";
+        //console.log("transform = ",transform)
         effect_zoom(transform);
     }
 
@@ -545,7 +561,6 @@ Ignore:<input type="checkbox" id="ignoreToggle">
 
     function reset_zoom() {
       rotateAngle = 0;
-      transform = d3.zoomIdentity;
       svg.transition()
           .duration(700)
           .call(zoom.transform, d3.zoomIdentity);
