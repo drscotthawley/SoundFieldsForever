@@ -441,7 +441,7 @@ public class MainActivity extends AppCompatActivity {
     public void setSocketName(View view) {
         socketName = setSocketName.getText().toString();
 
-        // Adds socketName to preferences 
+        // Adds socketName to preferences
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
         SharedPreferences.Editor editor = settings.edit();
         editor.putString("socketName", socketName);

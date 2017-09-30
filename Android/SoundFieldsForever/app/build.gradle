@@ -17,31 +17,32 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-    flavorDimensions "stage", "mode"
-
-    productFlavors {
-        dev {
-            dimension "stage"
-            minSdkVersion 23
-            versionNameSuffix "-dev"
-            applicationIdSuffix '.dev'
-            // The following configuration limits the "dev" flavor to using
-            // English stringresources and xxhdpi screen-density resources.
-            resConfigs "en", "xxhdpi"
-        }
-
-        prod {
-            dimension "stage"
-        }
-
-        demo {
-            dimension "mode"
-        }
-
-        full {
-            dimension "mode"
-        }
-    }
+//    flavorDimensions "stage", "mode"
+//
+//    productFlavors {
+//        dev {
+//            dimension "stage"
+//            minSdkVersion 23
+//            versionNameSuffix "-dev"
+//            applicationIdSuffix '.dev'
+//            // The following configuration limits the "dev" flavor to using
+//            // English stringresources and xxhdpi screen-density resources.
+//            resConfigs "en", "xxhdpi"
+//        }
+//
+//        prod {
+//            dimension "stage"
+//        }
+//
+//        demo {
+//            dimension "mode"
+//        }
+//
+//        full {
+//            dimension "mode"
+//            minSdkVersion 23
+//        }
+//    }
 
     dexOptions {
         preDexLibraries true
