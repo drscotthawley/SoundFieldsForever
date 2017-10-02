@@ -1,0 +1,4 @@
+sceneSetups:
+- path: Assets/Sound Fields Forever.unity
+  isLoaded: 1
+  isActive: 1
