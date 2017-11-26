@@ -7,6 +7,10 @@
 <meta property="og:description" content="This is the server that takes data from the Tango client and plots it." />
 <meta property="og:image" content="http://hedges.belmont.edu/~shawley/WebVizServer/sffwebviz.png">
 <meta property="og:url" content="http://hedges.belmont.edu/~shawley/WebVizServer">
+
+ <meta property="twitter:title" content="Sounds Fields Forever WebViz Server" />
+ <meta name="twitter:card" content="summary_large_image">
+ <meta property="twitter:image" content="http://hedges.belmont.edu/~shawley/WebVizServer/sffwebviz.png">
 <style>
 
 
@@ -242,7 +246,10 @@ Ignore:<input type="checkbox" id="ignoreToggle">
     function set_colors() {
         dBIndex = document.getElementById("freqDropDown").value;
         dB_plot = dBvals[dBIndex];
-        maxHue = 310;
+	red_hue = 0;
+	purple_hue = 310;
+        minHue = purple_hue;
+        maxHue = red_hue;
         abs_dBMax = 100;  // default values
         abs_dBMin = 40;
         if (document.getElementById('autoscaleToggle').checked) {
@@ -262,7 +269,7 @@ Ignore:<input type="checkbox" id="ignoreToggle">
         //console.log(" set_colors: colors = ",colors)*/
         var linearScale = d3.scaleLinear()
                             .domain([dBMin,dBMax])
-                            .range([0,maxHue])
+                            .range([minHue,maxHue])
                             .clamp(true)
 
         colors = dB_plot.slice().map( function(d) { return linearScale(d) });
@@ -437,7 +444,7 @@ Ignore:<input type="checkbox" id="ignoreToggle">
       nstops = 10;;
       var legend = svg.append("defs").append("svg:linearGradient").attr("id", "gradient").attr("x1", "100%").attr("y1", "0%").attr("x2", "100%").attr("y2", "100%").attr("spreadMethod", "pad");
       for (i=0; i<nstops+1; i++) {
-          legend.append("stop").attr("offset", i*(100/nstops)+"%").attr("stop-color", d3.hsl(maxHue*(nstops-i)/nstops, 1, .5)).attr("stop-opacity", 1);
+          legend.append("stop").attr("offset", i*(100/nstops)+"%").attr("stop-color", d3.hsl(minHue+(maxHue-minHue)*(nstops-i)/nstops, 1, .5)).attr("stop-opacity", 1);
       }
       colorbar = svg.append("g")
           .attr("class", "colorbar")
