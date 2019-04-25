@@ -20,7 +20,7 @@ This README is largely blank because the code development was put on pause after
 
 ## Images:
 ### Vive results (3D):
-![Vive Results Image](https://i.imgur.com/Uw50KxK.jpg)
+![Vive Results Image](https://i.imgur.com/WyGMbZC.jpg)
 
 ### Tango/Android smartphone results (2D): <br>
 *Note that by request from many audio engineers, we've reversed the color map since this image was made.*
