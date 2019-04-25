@@ -19,9 +19,9 @@ This README is largely blank because the code development was put on pause after
 * Automated integration between Unity app & data export to [ParaView](https://www.paraview.org/).
 
 ## Images:
-###Vive results (3D):
+### Vive results (3D):
 ![Vive Results Image](https://i.imgur.com/Uw50KxK.jpg)
 
-###Tango/Android smartphone results (2D): <br>
+### Tango/Android smartphone results (2D): <br>
 *Note that by request from many audio engineers, we've reversed the color map since this image was made.*
 ![Tango Results Image](https://i.imgur.com/rlyWPDN.jpg)
