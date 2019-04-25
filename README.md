@@ -3,7 +3,7 @@
 
 Authors: Scott H. Hawley (Unity & Javascript), Sebastian Alegre (all Android code)
 
-This is really two different codebases for the same purpose.  One is an combination client-server system for Android [Tango](https://en.wikipedia.org/wiki/Tango_(platform)) Augmented Reality devices, and another is a Unity app for use with HTC Vive Virtual Reality systems. 
+This is really two different codebases for the same purpose.  One is an combination client-server system for Android [Tango](https://en.wikipedia.org/wiki/Tango_(platform)) Augmented Reality devices, and another is a Unity app for use with HTC Vive Virtual Reality systems.* 
 
 This README is largely blank because the code development was put on pause after key students (Alegre & Yonker) were no longer available to work on the code, and Google dropped support for the Tango platform.
 
@@ -17,3 +17,7 @@ This README is largely blank because the code development was put on pause after
 ## TODO:
 * Port smartphone code from Tango to ARCore/ARKit
 * Automated integration between Unity app & data export to [ParaView](https://www.paraview.org/).
+
+## Images:
+*Vive results (3D):
+![Vive Results Image](https://i.imgur.com/82DPzuu.jpg)
